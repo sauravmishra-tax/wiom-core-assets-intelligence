@@ -17,6 +17,18 @@ export const metadata: Metadata = {
   description: "Live device lifecycle, ageing, and recovery visibility.",
 };
 
+// Runs before paint (blocking, inline) so the page never flashes the wrong
+// theme on load - reading localStorage after hydration would show dark for
+// a frame even when the user picked light last time.
+const THEME_INIT_SCRIPT = `
+(function () {
+  try {
+    var theme = localStorage.getItem("waip_theme");
+    if (theme === "light") document.documentElement.classList.add("light");
+  } catch (_) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -26,8 +38,12 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full dark`}
+      suppressHydrationWarning
     >
-      <body className="min-h-screen bg-[#05040d] text-slate-200 antialiased">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="min-h-screen bg-background text-foreground antialiased">
         {children}
       </body>
     </html>

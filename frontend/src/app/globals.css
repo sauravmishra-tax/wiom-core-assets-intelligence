@@ -87,3 +87,102 @@ body {
     animation: none;
   }
 }
+
+/* ── Light mode ──────────────────────────────────────────────────────────
+   Every page in this app was built against one fixed dark palette (literal
+   Tailwind utilities like text-slate-300, bg-white/5, border-white/10 -
+   never a `dark:` variant), so there is no light-mode equivalent to fall
+   back to. Rather than touch every page/table cell, this block overrides
+   those same utility classes wherever `.light` is set on <html> (see
+   ThemeToggle.tsx). Written as plain (unlayered) CSS, which the CSS
+   cascade always ranks above Tailwind's `@layer utilities` rules
+   regardless of specificity - no !important needed. */
+
+html.light {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+html.light .ambient-glow {
+  background: radial-gradient(circle at 20% 20%, #ede9fe 0%, transparent 45%),
+    radial-gradient(circle at 80% 0%, #e0f2fe 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, #fce7f3 0%, transparent 50%), #f8fafc;
+}
+
+html.light .ambient-glow::before,
+html.light .ambient-glow::after {
+  opacity: 0.25;
+}
+
+html.light .glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+html.light .bg-\[\#05040d\] {
+  background-color: #f8fafc;
+}
+
+html.light .bg-black\/20,
+html.light .bg-black\/30,
+html.light .bg-black\/40 {
+  background-color: rgba(15, 23, 42, 0.04);
+}
+
+html.light .bg-slate-800\/60,
+html.light .bg-slate-900\/40 {
+  background-color: rgba(15, 23, 42, 0.05);
+}
+
+html.light .bg-white {
+  background-color: #ffffff;
+}
+
+html.light .bg-white\/5 {
+  background-color: rgba(15, 23, 42, 0.04);
+}
+
+html.light .bg-white\/10 {
+  background-color: rgba(15, 23, 42, 0.06);
+}
+
+html.light .border-white\/5 {
+  border-color: rgba(15, 23, 42, 0.06);
+}
+
+html.light .border-white\/10 {
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+html.light .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.16);
+}
+
+html.light .text-white,
+html.light .text-slate-100 {
+  color: #0f172a;
+}
+
+html.light .text-slate-200 {
+  color: #1e293b;
+}
+
+html.light .text-slate-300 {
+  color: #334155;
+}
+
+html.light .text-slate-400 {
+  color: #475569;
+}
+
+html.light .text-slate-500 {
+  color: #64748b;
+}
+
+html.light .text-slate-600 {
+  color: #94a3b8;
+}
+
+html.light .text-slate-700 {
+  color: #cbd5e1;
+}

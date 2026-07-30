@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { currentUserEmail, currentUserRole, isAdmin, signOut } from "@/components/AuthGate";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV_ITEMS = [
   { href: "/summary", label: "Summary", icon: "✦" },
@@ -70,6 +71,7 @@ export function Sidebar() {
         })}
       </nav>
       <div className="mt-auto space-y-2 px-2">
+        <ThemeToggle />
         <div className="text-xs text-slate-600">live &middot; Snowflake PROD_DB</div>
         {email && (
           <div className="truncate text-xs text-slate-500" title={email}>
