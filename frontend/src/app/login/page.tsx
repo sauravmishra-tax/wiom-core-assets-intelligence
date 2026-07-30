@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { signIn } from "@/components/AuthGate";
+import { LaunchSequence } from "@/components/LaunchSequence";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,8 +33,10 @@ export default function LoginPage() {
       const { email: signedInEmail, role, token } = await api.login(email, password);
       signIn(signedInEmail, role, token);
       setLaunching(true);
-      // Let the exit animation play before navigating.
-      setTimeout(() => router.push("/executive"), 650);
+      // Fire-and-forget: warms the backend's server-side query cache so
+      // the Executive page's own fetch (right after this animation ends)
+      // is a cache hit instead of a fresh multi-second Snowflake round trip.
+      api.executiveKpis("").catch(() => {});
     } catch (err) {
       setError(String((err as Error).message ?? err));
       setSubmitting(false);
@@ -107,18 +110,7 @@ export default function LoginPage() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {launching && (
-          <motion.div
-            key="launch-pulse"
-            initial={{ opacity: 0, scale: 0.6 }}
-            animate={{ opacity: 1, scale: 1.4 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6, ease: "easeIn" }}
-            className="pointer-events-none h-24 w-24 rounded-full bg-gradient-to-br from-[#D9009D] to-[#0839FB] blur-2xl"
-          />
-        )}
-      </AnimatePresence>
+      {launching && <LaunchSequence onComplete={() => router.push("/executive")} />}
     </div>
   );
 }
