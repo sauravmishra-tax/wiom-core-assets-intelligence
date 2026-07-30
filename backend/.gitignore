@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+*.log
+
+# Runtime state - contains password hashes, live session bearer tokens, and
+# audit history. Must never be committed; on Railway this data resets on
+# redeploy unless a persistent volume is mounted at app/data.
+app/data/custom_queries.json
+app/data/users.json
+app/data/sessions.json
+app/data/audit_log.json

@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+:root {
+  --background: #05040d;
+  --foreground: #e5e7f5;
+
+  /* WIOM brand: magenta primary, blue secondary (sampled from wiom.in) */
+  --brand-violet: #d9009d;
+  --brand-cyan: #0839fb;
+  --brand-pink: #ff4fc4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* Ambient glow background used behind auth + dashboard shells */
+.ambient-glow {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: radial-gradient(circle at 20% 20%, #1e1b4b 0%, transparent 45%),
+    radial-gradient(circle at 80% 0%, #0e3a4a 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, #3b0764 0%, transparent 50%),
+    #05040d;
+}
+
+.ambient-glow::before,
+.ambient-glow::after {
+  content: "";
+  position: absolute;
+  width: 42vw;
+  height: 42vw;
+  border-radius: 9999px;
+  filter: blur(90px);
+  opacity: 0.35;
+  animation: drift 22s ease-in-out infinite alternate;
+}
+
+.ambient-glow::before {
+  top: -10%;
+  left: -10%;
+  background: var(--brand-violet);
+}
+
+.ambient-glow::after {
+  bottom: -15%;
+  right: -10%;
+  background: var(--brand-cyan);
+  animation-delay: -8s;
+}
+
+@keyframes drift {
+  from {
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    transform: translate(6vw, 4vw) scale(1.15);
+  }
+}
+
+.brand-gradient-text {
+  background: linear-gradient(90deg, var(--brand-violet), var(--brand-cyan));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass-card {
+  background: rgba(15, 13, 32, 0.55);
+  border: 1px solid rgba(148, 130, 255, 0.15);
+  backdrop-filter: blur(16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-glow::before,
+  .ambient-glow::after {
+    animation: none;
+  }
+}
