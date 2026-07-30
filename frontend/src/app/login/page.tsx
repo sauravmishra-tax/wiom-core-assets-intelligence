@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [expiredNotice, setExpiredNotice] = useState(false);
+  const [totalDevices, setTotalDevices] = useState<number | null>(null);
 
   useEffect(() => {
     // Read manually (not useSearchParams) to avoid needing a Suspense
@@ -36,7 +37,12 @@ export default function LoginPage() {
       // Fire-and-forget: warms the backend's server-side query cache so
       // the Executive page's own fetch (right after this animation ends)
       // is a cache hit instead of a fresh multi-second Snowflake round trip.
-      api.executiveKpis("").catch(() => {});
+      // Also feeds LaunchSequence's live device counter with a real number
+      // instead of a decorative fake one.
+      api
+        .executiveKpis("")
+        .then((k) => setTotalDevices(k.TOTAL_DEVICES))
+        .catch(() => {});
     } catch (err) {
       setError(String((err as Error).message ?? err));
       setSubmitting(false);
@@ -110,7 +116,12 @@ export default function LoginPage() {
         )}
       </AnimatePresence>
 
-      {launching && <LaunchSequence onComplete={() => router.push("/executive")} />}
+      {launching && (
+        <LaunchSequence
+          totalDevices={totalDevices}
+          onComplete={() => router.push("/executive")}
+        />
+      )}
     </div>
   );
 }
