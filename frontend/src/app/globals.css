@@ -103,19 +103,22 @@ html.light {
   --foreground: #0f172a;
 }
 
+/* Flat, near-white instead of a strong pink/violet wash - the first pass
+   let the glow show through translucent glass-cards and muddied every
+   number/badge's contrast. Kept faint enough to still read as "the same
+   app", not colorless. */
 html.light .ambient-glow {
-  background: radial-gradient(circle at 20% 20%, #ede9fe 0%, transparent 45%),
-    radial-gradient(circle at 80% 0%, #e0f2fe 0%, transparent 40%),
-    radial-gradient(circle at 50% 100%, #fce7f3 0%, transparent 50%), #f8fafc;
+  background: radial-gradient(circle at 20% 15%, #eef2ff 0%, transparent 40%),
+    radial-gradient(circle at 85% 10%, #ecfeff 0%, transparent 35%), #f1f5f9;
 }
 
 html.light .ambient-glow::before,
 html.light .ambient-glow::after {
-  opacity: 0.25;
+  opacity: 0.12;
 }
 
 html.light .glass-card {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(15, 23, 42, 0.08);
 }
 
@@ -185,4 +188,30 @@ html.light .text-slate-600 {
 
 html.light .text-slate-700 {
   color: #cbd5e1;
+}
+
+/* Status/tone colors (KpiCard danger/warning/success, rate badges, the
+   data-quality banner) were all picked as pale tints meant to glow on a
+   near-black background - emerald-300, rose-400, amber-200/300/400 read as
+   washed-out and low-contrast on white. Darken each to its ~600/700 shade,
+   which is what these same Tailwind palettes use for light-background
+   contexts. Chip backgrounds (bg-emerald-500/15 etc.) are left alone -
+   those already read fine since they're a tint behind dark text, not text
+   itself. */
+html.light .text-emerald-300,
+html.light .text-emerald-400 {
+  color: #047857;
+}
+
+html.light .text-rose-300,
+html.light .text-rose-400 {
+  color: #be123c;
+}
+
+html.light .text-amber-200,
+html.light .text-amber-200\/90,
+html.light .text-amber-300,
+html.light .text-amber-300\/80,
+html.light .text-amber-400\/80 {
+  color: #b45309;
 }
