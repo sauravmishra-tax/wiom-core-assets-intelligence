@@ -23,12 +23,16 @@ const BUCKET_LABELS: Record<string, string> = {
 };
 
 function heatColor(value: number, max: number): string {
-  if (value === 0) return "bg-slate-900/40 text-slate-700";
+  if (value === 0)
+    return "bg-slate-100 text-slate-400 dark:bg-slate-900/40 dark:text-slate-600";
   const intensity = Math.min(1, value / max);
-  if (intensity < 0.15) return "bg-emerald-950/60 text-emerald-300";
-  if (intensity < 0.35) return "bg-amber-950/60 text-amber-300";
-  if (intensity < 0.6) return "bg-orange-950/70 text-orange-300";
-  return "bg-red-950/80 text-red-300";
+  if (intensity < 0.15)
+    return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300";
+  if (intensity < 0.35)
+    return "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300";
+  if (intensity < 0.6)
+    return "bg-orange-100 text-orange-700 dark:bg-orange-950/70 dark:text-orange-300";
+  return "bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300";
 }
 
 export default function AgeingPage() {
