@@ -75,7 +75,7 @@ def enriched_cte() -> str:
         {recharge_expiry_sql}
     ),
     financial_writeoff AS (
-        SELECT DEVICE_ID, WRITTEN_OFF_DATE, WRITE_OFF_AMOUNT
+        SELECT DEVICE_ID, TRY_TO_DATE(WRITTEN_OFF_DATE) AS WRITTEN_OFF_DATE
         FROM PROD_DB.PUBLIC.FINANCIAL_WRITE_OFF_DEVICES
     ),
     enriched AS (
@@ -86,7 +86,6 @@ def enriched_cte() -> str:
             re.last_expiry AS RESOLVED_RECHARGE_EXPIRY,
             fw.WRITTEN_OFF_DATE AS WRITE_OFF_DATE,
             YEAR(fw.WRITTEN_OFF_DATE) AS WRITE_OFF_YEAR,
-            fw.WRITE_OFF_AMOUNT,
             {status_normalized_expr} AS STATUS_NORMALIZED,
             {device_type_normalized_expr} AS DEVICE_TYPE_NORMALIZED,
             {invoice_date_expr} AS INVOICE_DATE,
