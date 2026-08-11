@@ -203,15 +203,8 @@ WHERE csp_id NOT IN ('a0a6w1', 'a0a0b1') AND partner_id IS NOT NULL AND _fivetra
     ),
     "write_off_date_expr": (
         "expression",
-        "Write-off Date (STATUS_UPDATED_AT when WRITTEN_OFF, else pickup ticket time)",
-        """
-CASE WHEN d.STATUS = 'WRITTEN_OFF' THEN
-    COALESCE(
-        d.STATUS_UPDATED_AT,
-        TRY_TO_TIMESTAMP_NTZ(d.LAST_PICKUP_TICKET_DETAILS:final_resolved_time::string)
-    )
-ELSE NULL END
-""".strip(),
+        "Write-off Date (from FINANCIAL_WRITE_OFF_DEVICES — joined in pipeline)",
+        "fw.WRITTEN_OFF_DATE",
     ),
 }
 

@@ -74,19 +74,24 @@ def enriched_cte() -> str:
     recharge_expiry AS (
         {recharge_expiry_sql}
     ),
+    financial_writeoff AS (
+        SELECT DEVICE_ID, WRITTEN_OFF_DATE, WRITE_OFF_AMOUNT
+        FROM PROD_DB.PUBLIC.FINANCIAL_WRITE_OFF_DEVICES
+    ),
     enriched AS (
         SELECT
             d.*,
             sl.status1 AS RAW_STATUS1,
             sl.location AS RAW_LOCATION,
             re.last_expiry AS RESOLVED_RECHARGE_EXPIRY,
+            fw.WRITTEN_OFF_DATE AS WRITE_OFF_DATE,
+            YEAR(fw.WRITTEN_OFF_DATE) AS WRITE_OFF_YEAR,
+            fw.WRITE_OFF_AMOUNT,
             {status_normalized_expr} AS STATUS_NORMALIZED,
             {device_type_normalized_expr} AS DEVICE_TYPE_NORMALIZED,
             {invoice_date_expr} AS INVOICE_DATE,
             YEAR({invoice_date_expr}) AS INVOICE_YEAR,
             {invoice_number_expr} AS INVOICE_NUMBER,
-            {write_off_date_expr} AS WRITE_OFF_DATE,
-            YEAR({write_off_date_expr}) AS WRITE_OFF_YEAR,
             {dispatch_bucket_expr} AS DISPATCH_BUCKET,
             {holder_bucket_expr} AS HOLDER_BUCKET,
             {grn_source_bucket_expr} AS GRN_SOURCE_BUCKET,
@@ -94,6 +99,7 @@ def enriched_cte() -> str:
         FROM deduped d
         LEFT JOIN status_location sl ON sl.device_id = upper(trim(d.DEVICE_ID))
         LEFT JOIN recharge_expiry re ON re.device_id = upper(trim(d.DEVICE_ID))
+        LEFT JOIN financial_writeoff fw ON fw.DEVICE_ID = upper(trim(d.DEVICE_ID))
         WHERE d.CURRENT_LOCATION IS DISTINCT FROM 'test'
           AND d.DEVICE_ID IS NOT NULL AND TRIM(d.DEVICE_ID) <> ''
     )
