@@ -100,7 +100,7 @@ export default function WarehousesPage() {
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
             <XAxis dataKey="name" stroke="#475569" angle={-20} textAnchor="end" height={70} />
             <YAxis stroke="#475569" />
-            <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #1e293b" }} />
+            <Tooltip contentStyle={{ background: "var(--tooltip-bg, #fff)", border: "1px solid var(--tooltip-border, #e2e8f0)", color: "var(--tooltip-text, #0f172a)", borderRadius: "8px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }} />
             <Legend />
             <Bar dataKey="Idle" fill="#f59e0b" radius={[4, 4, 0, 0]} />
             <Bar dataKey="Lost" fill="#ef4444" radius={[4, 4, 0, 0]} />

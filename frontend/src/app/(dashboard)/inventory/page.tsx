@@ -120,7 +120,7 @@ export default function InventoryPage() {
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
             <XAxis dataKey="source" stroke="#475569" />
             <YAxis stroke="#475569" />
-            <Tooltip contentStyle={{ background: "#0f172a", border: "1px solid #1e293b" }} />
+            <Tooltip contentStyle={{ background: "var(--tooltip-bg, #fff)", border: "1px solid var(--tooltip-border, #e2e8f0)", color: "var(--tooltip-text, #0f172a)", borderRadius: "8px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }} />
             <Legend />
             {dispatchStates.map((d) => (
               <Bar key={d} dataKey={d} stackId="a" name={DISPATCH_LABELS[d]} fill={dispatchColors[d]} />

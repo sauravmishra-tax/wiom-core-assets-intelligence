@@ -342,7 +342,7 @@ export default function ExecutivePage() {
                 ))}
               </Pie>
               <Tooltip
-                contentStyle={{ background: "#0f172a", border: "1px solid #1e293b" }}
+                contentStyle={{ background: "var(--tooltip-bg, #fff)", border: "1px solid var(--tooltip-border, #e2e8f0)", color: "var(--tooltip-text, #0f172a)", borderRadius: "8px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}
               />
               <Legend />
             </PieChart>
@@ -355,7 +355,7 @@ export default function ExecutivePage() {
               <XAxis type="number" stroke="#475569" />
               <YAxis type="category" dataKey="name" width={110} stroke="#475569" />
               <Tooltip
-                contentStyle={{ background: "#0f172a", border: "1px solid #1e293b" }}
+                contentStyle={{ background: "var(--tooltip-bg, #fff)", border: "1px solid var(--tooltip-border, #e2e8f0)", color: "var(--tooltip-text, #0f172a)", borderRadius: "8px", boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}
                 cursor={{ fill: "#1e293b55" }}
               />
               <Bar dataKey="value" radius={[0, 6, 6, 0]}>

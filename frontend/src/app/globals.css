@@ -8,6 +8,18 @@
   --brand-violet: #d9009d;
   --brand-cyan: #0839fb;
   --brand-pink: #ff4fc4;
+
+  /* Chart tooltip — dark mode defaults */
+  --tooltip-bg: #0f172a;
+  --tooltip-border: #1e293b;
+  --tooltip-text: #e2e8f0;
+}
+
+.light :root,
+[data-theme="light"] {
+  --tooltip-bg: #ffffff;
+  --tooltip-border: #e2e8f0;
+  --tooltip-text: #0f172a;
 }
 
 @theme inline {
