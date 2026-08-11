@@ -1,4 +1,4 @@
-"""Shared SQL building blocks over PROD_DB.DBT_INVENTORY_REQUEST.INVENTORY_MODEL.
+"""Shared SQL building blocks over PROD_DB.PUBLIC.INVENTORY_MODEL.
 
 Every fragment below is pulled from query_store at call time - nothing here
 is hardcoded independently of the Schema Config page. See
@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from app.services import query_store
 
-INVENTORY_TABLE = "PROD_DB.DBT_INVENTORY_REQUEST.INVENTORY_MODEL"
+INVENTORY_TABLE = "PROD_DB.PUBLIC.INVENTORY_MODEL"
 
 AGING_BUCKET_ORDER = [
     "active",
@@ -94,7 +94,7 @@ def enriched_cte() -> str:
         FROM deduped d
         LEFT JOIN status_location sl ON sl.device_id = upper(trim(d.DEVICE_ID))
         LEFT JOIN recharge_expiry re ON re.device_id = upper(trim(d.DEVICE_ID))
-        WHERE d.CURRENT_LOCATION_RESOLVED IS DISTINCT FROM 'test'
+        WHERE d.CURRENT_LOCATION IS DISTINCT FROM 'test'
           AND d.DEVICE_ID IS NOT NULL AND TRIM(d.DEVICE_ID) <> ''
     )
     """.strip()

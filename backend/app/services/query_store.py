@@ -32,13 +32,13 @@ _REGISTRY: dict[str, tuple[str, str, str]] = {
         "GRN Dedup (base device list)",
         """
 SELECT im.*
-FROM PROD_DB.DBT_INVENTORY_REQUEST.INVENTORY_MODEL im
+FROM PROD_DB.PUBLIC.INVENTORY_MODEL im
 LEFT JOIN (
     SELECT im.DEVICE_ID
-    FROM PROD_DB.DBT_INVENTORY_REQUEST.INVENTORY_MODEL im
+    FROM PROD_DB.PUBLIC.INVENTORY_MODEL im
     JOIN (
         SELECT mac_id, device_id
-        FROM PROD_DB.DBT_INVENTORY_REQUEST.INVENTORY_MODEL td
+        FROM PROD_DB.PUBLIC.INVENTORY_MODEL td
         WHERE DEVICE_ID LIKE 'PNM%'
     ) t1 ON t1.DEVICE_ID <> im.DEVICE_ID AND t1.mac_id = im.MAC_ID
 ) t2 ON t2.device_id = im.DEVICE_ID
@@ -168,13 +168,13 @@ END
     ),
     "invoice_date_expr": (
         "expression",
-        "Invoice Date (from FIRST_GRN_DETAIL JSON)",
-        "TRY_TO_TIMESTAMP_NTZ(FIRST_GRN_DETAIL:invoice_date::string)",
+        "Invoice Date (INVOICE_DATE_FINANCE — dedicated column, 96% coverage, back to 2015)",
+        "TRY_TO_DATE(d.INVOICE_DATE_FINANCE)",
     ),
     "invoice_number_expr": (
         "expression",
-        "Invoice Number (from FIRST_GRN_DETAIL JSON)",
-        "FIRST_GRN_DETAIL:invoice_number::string",
+        "Invoice Number (INVOICE_NUMBER_FINANCE — dedicated column)",
+        "d.INVOICE_NUMBER_FINANCE",
     ),
     "partner_master": (
         "statement",
@@ -203,15 +203,8 @@ WHERE csp_id NOT IN ('a0a6w1', 'a0a0b1') AND partner_id IS NOT NULL AND _fivetra
     ),
     "write_off_date_expr": (
         "expression",
-        "Write-off Date (best-effort - no dedicated column exists)",
-        """
-CASE WHEN d.STATUS = 'WRITTEN_OFF' THEN
-    COALESCE(
-        d.STATUS_UPDATED_AT,
-        TRY_TO_TIMESTAMP_NTZ(d.LAST_PICKUP_TICKET_DETAILS:final_resolved_time::string)
-    )
-ELSE NULL END
-""".strip(),
+        "Write-off Date (FINANCIAL_WRITE_OFF — dedicated column, 99.8% coverage)",
+        "TRY_TO_TIMESTAMP_NTZ(d.FINANCIAL_WRITE_OFF)",
     ),
 }
 
