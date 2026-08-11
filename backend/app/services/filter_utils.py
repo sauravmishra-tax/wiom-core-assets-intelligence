@@ -36,4 +36,4 @@ def where_or_and(filter_clause: str, existing_where: bool = False) -> str:
         return ""
     if existing_where:
         return f" {filter_clause}"
-    return " WHERE " + filter_clause.lstrip("AND ").lstrip()
+    return " WHERE " + (filter_clause[4:] if filter_clause.startswith("AND ") else filter_clause)
