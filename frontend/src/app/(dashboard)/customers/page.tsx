@@ -120,7 +120,7 @@ export default function CustomersPage() {
                     className="border-b border-white/5 hover:bg-white/5"
                   >
                     <td className="p-2 font-mono text-xs text-slate-300">
-                      {row.CUSTOMER_ACCOUNT_ID}
+                      {row.CUSTOMER_ACCOUNT_ID.replace(/\.0+$/, "")}
                     </td>
                     <td className="p-2 text-right text-slate-300">
                       {row.TOTAL_DEVICES.toLocaleString("en-IN")}
@@ -148,7 +148,7 @@ export default function CustomersPage() {
                     </td>
                     <td className="p-2 text-right">
                       <ExportButton
-                        href={`/api/devices/export/full.csv?customer_account_id=${encodeURIComponent(row.CUSTOMER_ACCOUNT_ID)}`}
+                        href={`/api/devices/export/full.csv?customer_account_id=${encodeURIComponent(row.CUSTOMER_ACCOUNT_ID.replace(/\.0+$/, ""))}`}
                         label="Devices"
                       />
                     </td>
