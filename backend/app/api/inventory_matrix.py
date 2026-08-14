@@ -30,6 +30,24 @@ _STATUS_SQL = f"""
 {_PFX}
 SELECT
     SEGMENT,
+    -- For CSP/Ex-CSP show partner_id as sub-identifier; WIOM has no partner
+    CASE
+        WHEN SEGMENT IN ('CSP', 'Ex-CSP') AND PARTNER_ACCOUNT_ID IS NOT NULL
+             THEN PARTNER_ACCOUNT_ID
+        ELSE NULL
+    END AS PARTNER_SUB,
+    DEVICE_TYPE_NORMALIZED,
+    COALESCE(STATUS_NORMALIZED, 'UNKNOWN') AS STATUS_NORMALIZED,
+    COUNT(*) AS DEVICE_COUNT
+FROM segmented
+GROUP BY 1, 2, 3, 4
+ORDER BY SEGMENT, PARTNER_SUB NULLS LAST, DEVICE_TYPE_NORMALIZED, DEVICE_COUNT DESC
+"""
+
+_STATUS_AGG_SQL = f"""
+{_PFX}
+SELECT
+    SEGMENT,
     DEVICE_TYPE_NORMALIZED,
     COALESCE(STATUS_NORMALIZED, 'UNKNOWN') AS STATUS_NORMALIZED,
     COUNT(*) AS DEVICE_COUNT
@@ -42,6 +60,11 @@ _WRITEOFF_OVERLAP_SQL = f"""
 {_PFX}
 SELECT
     SEGMENT,
+    CASE
+        WHEN SEGMENT IN ('CSP', 'Ex-CSP') AND PARTNER_ACCOUNT_ID IS NOT NULL
+             THEN PARTNER_ACCOUNT_ID
+        ELSE NULL
+    END AS PARTNER_SUB,
     DEVICE_TYPE_NORMALIZED,
     COUNT(*) AS TOTAL,
     SUM(CASE WHEN WRITE_OFF_DATE IS NOT NULL THEN 1 ELSE 0 END) AS FINANCIAL_WO,
@@ -53,8 +76,8 @@ SELECT
     SUM(CASE WHEN WRITE_OFF_DATE IS NULL AND STATUS_NORMALIZED = 'WRITTEN_OFF' THEN 1 ELSE 0 END) AS OPS_WO_ONLY_NO_FIN,
     SUM(CASE WHEN WRITE_OFF_DATE IS NULL AND STATUS_NORMALIZED = 'LOST' THEN 1 ELSE 0 END) AS LOST_ONLY_NO_FIN
 FROM segmented
-GROUP BY 1, 2
-ORDER BY 1, 2
+GROUP BY 1, 2, 3
+ORDER BY 1, 2 NULLS LAST, 3
 """
 
 _AGEING_SQL = f"""
@@ -92,8 +115,13 @@ ORDER BY 1, 2, INVOICE_FY_SORT
 
 
 @router.get("/status")
-def get_status_matrix(client: WarehouseClient = Depends(get_warehouse_client)) -> dict:
-    rows = client.query(_STATUS_SQL)
+def get_status_matrix(
+    sub: bool = False,
+    client: WarehouseClient = Depends(get_warehouse_client),
+) -> dict:
+    """sub=true returns per-partner rows; sub=false aggregates to segment level."""
+    sql = _STATUS_SQL if sub else _STATUS_AGG_SQL
+    rows = client.query(sql)
     return {"rows": rows}
 
 

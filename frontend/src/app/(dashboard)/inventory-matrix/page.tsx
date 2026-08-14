@@ -10,6 +10,7 @@ import { ExportButton } from "@/components/ExportButton";
 
 interface StatusRow {
   SEGMENT: string;
+  PARTNER_SUB?: string | null;
   DEVICE_TYPE_NORMALIZED: string;
   STATUS_NORMALIZED: string;
   DEVICE_COUNT: number;
@@ -17,6 +18,7 @@ interface StatusRow {
 
 interface OverlapRow {
   SEGMENT: string;
+  PARTNER_SUB?: string | null;
   DEVICE_TYPE_NORMALIZED: string;
   TOTAL: number;
   FINANCIAL_WO: number;
@@ -93,9 +95,10 @@ export default function InventoryMatrixPage() {
   const [invoiceFyData, setInvoiceFyData] = useState<InvoiceFyRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deviceTypeFilter, setDeviceTypeFilter] = useState<string>("All");
+  const [showSub, setShowSub] = useState(false);
 
   useEffect(() => {
-    fetchJson<{ rows: StatusRow[] }>("/api/inventory-matrix/status")
+    fetchJson<{ rows: StatusRow[] }>(`/api/inventory-matrix/status${showSub ? "?sub=true" : ""}`)
       .then((d) => setStatusData(d.rows))
       .catch((e) => setError(String(e.message)));
     fetchJson<{ rows: OverlapRow[] }>("/api/inventory-matrix/writeoff-overlap")
@@ -107,7 +110,7 @@ export default function InventoryMatrixPage() {
     fetchJson<{ rows: InvoiceFyRow[] }>("/api/inventory-matrix/invoice-fy")
       .then((d) => setInvoiceFyData(d.rows))
       .catch((e) => setError(String(e.message)));
-  }, []);
+  }, [showSub]);
 
   const loading = !statusData || !overlapData || !ageingData || !invoiceFyData;
 
@@ -133,7 +136,17 @@ export default function InventoryMatrixPage() {
             WIOM / CSP / Ex-CSP × Router / ONT — status, write-off, ageing, invoice FY
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowSub((v) => !v)}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium border transition-colors ${
+              showSub
+                ? "bg-[#D9009D]/30 text-[#ff6fd8] border-[#D9009D]/50"
+                : "bg-white/5 text-slate-400 border-white/10 hover:bg-white/10"
+            }`}
+          >
+            {showSub ? "▸ Hide sub-breakdown" : "▸ CSP / Ex-CSP by Partner ID"}
+          </button>
           {(["All", "Router", "ONT", "Unknown"] as const).map((dt) => (
             <button
               key={dt}
@@ -187,7 +200,7 @@ export default function InventoryMatrixPage() {
 
       {/* ---- STATUS MATRIX ---- */}
       {tab === "status" && statusData && (
-        <StatusMatrix rows={filterRows(statusData)} />
+        <StatusMatrix rows={filterRows(statusData)} showSub={showSub} />
       )}
 
       {/* ---- WRITE-OFF OVERLAP ---- */}
@@ -213,25 +226,33 @@ export default function InventoryMatrixPage() {
 
 // ---- STATUS MATRIX COMPONENT -----------------------------------------------
 
-function StatusMatrix({ rows }: { rows: StatusRow[] }) {
+function StatusMatrix({ rows, showSub }: { rows: StatusRow[]; showSub: boolean }) {
   const { allStatuses } = pivotStatus(rows);
 
-  // Build: segment → deviceType → status → count
-  const data: Record<string, Record<string, Record<string, number>>> = {};
+  // Build: segment → subKey → deviceType → status → count
+  // subKey = PARTNER_SUB when showSub, else DEVICE_TYPE_NORMALIZED directly under segment
+  const data: Record<string, Record<string, Record<string, Record<string, number>>>> = {};
   const segTotals: Record<string, number> = {};
-  const dtTotals: Record<string, Record<string, number>> = {};
   let grand = 0;
 
   for (const row of rows) {
+    const subKey = showSub && row.PARTNER_SUB ? row.PARTNER_SUB : "__agg__";
     data[row.SEGMENT] ??= {};
-    data[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED] ??= {};
-    data[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED][row.STATUS_NORMALIZED] =
-      (data[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED][row.STATUS_NORMALIZED] ?? 0) + row.DEVICE_COUNT;
+    data[row.SEGMENT][subKey] ??= {};
+    data[row.SEGMENT][subKey][row.DEVICE_TYPE_NORMALIZED] ??= {};
+    data[row.SEGMENT][subKey][row.DEVICE_TYPE_NORMALIZED][row.STATUS_NORMALIZED] =
+      (data[row.SEGMENT][subKey][row.DEVICE_TYPE_NORMALIZED][row.STATUS_NORMALIZED] ?? 0) + row.DEVICE_COUNT;
     segTotals[row.SEGMENT] = (segTotals[row.SEGMENT] ?? 0) + row.DEVICE_COUNT;
-    dtTotals[row.SEGMENT] ??= {};
-    dtTotals[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED] =
-      (dtTotals[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED] ?? 0) + row.DEVICE_COUNT;
     grand += row.DEVICE_COUNT;
+  }
+
+  // Back-compat for non-sub path: collapse subKey dimension
+  const dtTotals: Record<string, Record<string, number>> = {};
+  for (const row of rows) {
+    dtTotals[row.SEGMENT] ??= {};
+    const sk = showSub && row.PARTNER_SUB ? row.PARTNER_SUB : "__agg__";
+    const key = `${sk}::${row.DEVICE_TYPE_NORMALIZED}`;
+    dtTotals[row.SEGMENT][key] = (dtTotals[row.SEGMENT][key] ?? 0) + row.DEVICE_COUNT;
   }
 
   const statusColors: Record<string, string> = {
@@ -254,6 +275,7 @@ function StatusMatrix({ rows }: { rows: StatusRow[] }) {
           <thead>
             <tr className="border-b border-white/10 text-left text-slate-500 uppercase">
               <th className="p-2 sticky left-0 bg-slate-900/80">Segment</th>
+              {showSub && <th className="p-2 text-[10px]">Partner ID</th>}
               <th className="p-2">Device Type</th>
               {allStatuses.map((s) => (
                 <th key={s} className={`p-2 text-right ${statusColors[s] ?? "text-slate-400"}`}>
@@ -266,35 +288,56 @@ function StatusMatrix({ rows }: { rows: StatusRow[] }) {
           <tbody>
             {SEGMENTS.map((seg) => {
               if (!data[seg]) return null;
-              const dtKeys = Object.keys(data[seg]);
-              return dtKeys.map((dt, dtIdx) => (
-                <tr key={`${seg}-${dt}`} className="border-b border-white/5 hover:bg-white/5">
-                  {dtIdx === 0 && (
-                    <td
-                      className="p-2 font-bold text-slate-200 sticky left-0 bg-slate-900/60 align-top"
-                      rowSpan={dtKeys.length}
-                    >
-                      {seg}
-                      <div className="text-[10px] text-slate-500 font-normal">
-                        {fmt(segTotals[seg])} total
-                      </div>
-                    </td>
-                  )}
-                  <td className="p-2 text-slate-400">{dt}</td>
-                  {allStatuses.map((s) => (
-                    <td key={s} className={`p-2 text-right tabular-nums ${statusColors[s] ?? "text-slate-400"}`}>
-                      {fmt(data[seg][dt][s])}
-                    </td>
-                  ))}
-                  <td className="p-2 text-right font-semibold text-slate-200 tabular-nums">
-                    {fmt(dtTotals[seg][dt])}
-                  </td>
-                </tr>
-              ));
+              const subKeys = Object.keys(data[seg]).sort();
+              const totalColspan = showSub ? 3 : 2;
+
+              return subKeys.flatMap((subKey, subIdx) => {
+                const dtKeys = Object.keys(data[seg][subKey]);
+                const isPartnerSub = subKey !== "__agg__";
+                return dtKeys.map((dt, dtIdx) => {
+                  const rowKey = `${seg}-${subKey}-${dt}`;
+                  const dtCount = dtTotals[seg][`${subKey}::${dt}`] ?? 0;
+                  return (
+                    <tr key={rowKey} className={`border-b border-white/5 hover:bg-white/5 ${isPartnerSub ? "bg-white/[0.02]" : ""}`}>
+                      {/* Segment cell — spans all sub + dt rows */}
+                      {subIdx === 0 && dtIdx === 0 && (
+                        <td
+                          className="p-2 font-bold text-slate-200 sticky left-0 bg-slate-900/60 align-top"
+                          rowSpan={subKeys.reduce((s, k) => s + Object.keys(data[seg][k]).length, 0)}
+                        >
+                          {seg}
+                          <div className="text-[10px] text-slate-500 font-normal mt-0.5">
+                            {fmt(segTotals[seg])}
+                          </div>
+                        </td>
+                      )}
+                      {/* Partner sub cell */}
+                      {showSub && dtIdx === 0 && (
+                        <td
+                          className="p-2 text-[10px] font-mono text-slate-500 align-top"
+                          rowSpan={dtKeys.length}
+                          title={isPartnerSub ? subKey : undefined}
+                        >
+                          {isPartnerSub ? subKey : "—"}
+                        </td>
+                      )}
+                      <td className="p-2 text-slate-400">{dt}</td>
+                      {allStatuses.map((s) => (
+                        <td key={s} className={`p-2 text-right tabular-nums ${statusColors[s] ?? "text-slate-400"}`}>
+                          {fmt(data[seg][subKey][dt][s])}
+                        </td>
+                      ))}
+                      <td className="p-2 text-right font-semibold text-slate-200 tabular-nums">
+                        {fmt(dtCount)}
+                      </td>
+                    </tr>
+                  );
+                });
+              });
             })}
             {/* Grand total row */}
             <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
-              <td className="p-2 text-slate-300 sticky left-0 bg-slate-900/80" colSpan={2}>
+              <td className="p-2 text-slate-300 sticky left-0 bg-slate-900/80" colSpan={showSub ? 3 : 2}>
                 GRAND TOTAL
               </td>
               {allStatuses.map((s) => {
