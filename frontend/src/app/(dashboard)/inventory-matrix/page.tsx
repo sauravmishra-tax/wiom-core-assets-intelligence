@@ -363,25 +363,6 @@ function StatusMatrix({ rows, showSub }: { rows: StatusRow[]; showSub: boolean }
 // ---- WRITE-OFF OVERLAP COMPONENT -------------------------------------------
 
 function WriteoffOverlap({ rows, exportHref }: { rows: OverlapRow[]; exportHref: string }) {
-  // Aggregate by segment (sum across device types)
-  const bySegment: Record<string, OverlapRow> = {};
-  for (const row of rows) {
-    if (!bySegment[row.SEGMENT]) {
-      bySegment[row.SEGMENT] = { ...row };
-    } else {
-      const s = bySegment[row.SEGMENT];
-      s.TOTAL += row.TOTAL;
-      s.FINANCIAL_WO += row.FINANCIAL_WO;
-      s.OPS_WO += row.OPS_WO;
-      s.LOST += row.LOST;
-      s.FIN_AND_OPS_WO += row.FIN_AND_OPS_WO;
-      s.FIN_AND_LOST += row.FIN_AND_LOST;
-      s.FIN_WO_AND_ANY_OPS_FLAG += row.FIN_WO_AND_ANY_OPS_FLAG;
-      s.OPS_WO_ONLY_NO_FIN += row.OPS_WO_ONLY_NO_FIN;
-      s.LOST_ONLY_NO_FIN += row.LOST_ONLY_NO_FIN;
-    }
-  }
-
   const cols = [
     { key: "TOTAL", label: "Total Devices", color: "text-slate-200" },
     { key: "FINANCIAL_WO", label: "Financial WO", color: "text-purple-400" },
@@ -394,11 +375,34 @@ function WriteoffOverlap({ rows, exportHref }: { rows: OverlapRow[]; exportHref:
     { key: "LOST_ONLY_NO_FIN", label: "Lost only (no Fin WO)", color: "text-slate-400" },
   ] as const;
 
-  // Device type rows within each segment
-  const dtBySegment: Record<string, OverlapRow[]> = {};
+  type ColKey = (typeof cols)[number]["key"];
+
+  function addRow(target: OverlapRow, src: OverlapRow) {
+    cols.forEach((c) => { (target[c.key as ColKey] as number) += src[c.key as ColKey] as number; });
+  }
+
+  // Aggregate by segment
+  const bySegment: Record<string, OverlapRow> = {};
   for (const row of rows) {
-    dtBySegment[row.SEGMENT] ??= [];
-    dtBySegment[row.SEGMENT].push(row);
+    if (!bySegment[row.SEGMENT]) { bySegment[row.SEGMENT] = { ...row }; }
+    else { addRow(bySegment[row.SEGMENT], row); }
+  }
+
+  // Group: segment → partnerKey → device-type rows
+  const grouped: Record<string, Map<string, OverlapRow[]>> = {};
+  for (const row of rows) {
+    grouped[row.SEGMENT] ??= new Map();
+    const pid = row.PARTNER_SUB ?? "__none__";
+    if (!grouped[row.SEGMENT].has(pid)) grouped[row.SEGMENT].set(pid, []);
+    grouped[row.SEGMENT].get(pid)!.push(row);
+  }
+
+  function colCells(row: OverlapRow) {
+    return cols.map((c) => (
+      <td key={c.key} className={`p-2 text-right tabular-nums ${c.color}`}>
+        {fmt(row[c.key as ColKey] as number)}
+      </td>
+    ));
   }
 
   return (
@@ -409,65 +413,67 @@ function WriteoffOverlap({ rows, exportHref }: { rows: OverlapRow[]; exportHref:
         </h2>
         <ExportButton href={exportHref} label="Export CSV" />
       </div>
-      <div style={{ minWidth: "1100px" }}>
+      <div style={{ minWidth: "1200px" }}>
         <table className="w-full text-xs" style={{ tableLayout: "auto" }}>
           <thead>
             <tr className="border-b border-white/10 text-left text-slate-500 uppercase">
               <th className="p-2 sticky left-0 bg-slate-900/80">Segment</th>
+              <th className="p-2 text-[10px]">Partner ID</th>
               <th className="p-2">Device Type</th>
               {cols.map((c) => (
-                <th key={c.key} className={`p-2 text-right ${c.color}`}>
-                  {c.label}
-                </th>
+                <th key={c.key} className={`p-2 text-right ${c.color}`}>{c.label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {SEGMENTS.map((seg) => {
               const segRow = bySegment[seg];
-              const dtRows = dtBySegment[seg] ?? [];
               if (!segRow) return null;
+              const partnerEntries = [...(grouped[seg]?.entries() ?? [])];
+              // total rows = all dt rows across all partners + 1 subtotal
+              const totalDtRows = partnerEntries.reduce((s, [, r]) => s + r.length, 0);
+
               return (
                 <>
-                  {dtRows.map((row, dtIdx) => (
-                    <tr key={`${seg}-${row.DEVICE_TYPE_NORMALIZED}`} className="border-b border-white/5 hover:bg-white/5">
-                      {dtIdx === 0 && (
-                        <td
-                          className="p-2 font-bold text-slate-200 sticky left-0 bg-slate-900/60 align-top"
-                          rowSpan={dtRows.length + 1}
-                        >
-                          {seg}
-                        </td>
-                      )}
-                      <td className="p-2 text-slate-400">{row.DEVICE_TYPE_NORMALIZED}</td>
-                      {cols.map((c) => (
-                        <td key={c.key} className={`p-2 text-right tabular-nums ${c.color}`}>
-                          {fmt(row[c.key as keyof OverlapRow] as number)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
+                  {partnerEntries.flatMap(([pid, pRows], pIdx) =>
+                    pRows.map((row, dtIdx) => (
+                      <tr
+                        key={`${seg}-${pid}-${row.DEVICE_TYPE_NORMALIZED}`}
+                        className="border-b border-white/5 hover:bg-white/5"
+                      >
+                        {pIdx === 0 && dtIdx === 0 && (
+                          <td
+                            className="p-2 font-bold text-slate-200 sticky left-0 bg-slate-900/60 align-top"
+                            rowSpan={totalDtRows + 1}
+                          >
+                            {seg}
+                          </td>
+                        )}
+                        {dtIdx === 0 && (
+                          <td
+                            className="p-2 font-mono text-[10px] text-slate-400 align-top"
+                            rowSpan={pRows.length}
+                          >
+                            {pid === "__none__" ? "—" : pid}
+                          </td>
+                        )}
+                        <td className="p-2 text-slate-400">{row.DEVICE_TYPE_NORMALIZED}</td>
+                        {colCells(row)}
+                      </tr>
+                    ))
+                  )}
                   <tr key={`${seg}-total`} className="border-b border-white/10 bg-white/5 font-semibold">
-                    <td className="p-2 text-slate-300">Subtotal</td>
-                    {cols.map((c) => (
-                      <td key={c.key} className={`p-2 text-right tabular-nums ${c.color}`}>
-                        {fmt(segRow[c.key as keyof OverlapRow] as number)}
-                      </td>
-                    ))}
+                    <td className="p-2 text-slate-300" colSpan={2}>Subtotal</td>
+                    {colCells(segRow)}
                   </tr>
                 </>
               );
             })}
             {/* Grand total */}
             <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
-              <td className="p-2 text-slate-200 sticky left-0 bg-slate-900/80" colSpan={2}>
-                GRAND TOTAL
-              </td>
+              <td className="p-2 text-slate-200 sticky left-0 bg-slate-900/80" colSpan={3}>GRAND TOTAL</td>
               {cols.map((c) => {
-                const total = rows.reduce(
-                  (s, r) => s + ((r[c.key as keyof OverlapRow] as number) ?? 0),
-                  0
-                );
+                const total = rows.reduce((s, r) => s + ((r[c.key as ColKey] as number) ?? 0), 0);
                 return (
                   <td key={c.key} className={`p-2 text-right tabular-nums font-bold ${c.color}`}>
                     {fmt(total)}
