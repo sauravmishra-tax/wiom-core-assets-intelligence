@@ -1,7 +1,7 @@
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import ageing, asset_register, audit, auth, cache, customers, devices, executive, inventory, lost_devices, partners, recon, schema_config, vintage, warehouses
+from app.api import ageing, asset_register, audit, auth, cache, cohort, customers, devices, executive, inventory, inventory_matrix, invoice_register, lost_devices, partners, recon, schema_config, vintage, warehouses
 from app.core.config import get_settings
 from app.core.security import require_auth
 from app.services import cache_sync
@@ -45,6 +45,9 @@ app.include_router(auth.router)  # login must stay open; other routes self-gate
 app.include_router(audit.router)  # self-gates via require_admin per-route
 app.include_router(cache.router, dependencies=_auth_dep)
 app.include_router(recon.router, dependencies=_auth_dep)
+app.include_router(inventory_matrix.router, dependencies=_auth_dep)
+app.include_router(cohort.router, dependencies=_auth_dep)
+app.include_router(invoice_register.router, dependencies=_auth_dep)
 
 
 @app.on_event("startup")

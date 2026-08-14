@@ -52,6 +52,33 @@ def deduped_cte() -> str:
     """.strip()
 
 
+def segment_ctes() -> str:
+    """Appends csp_partners + segmented CTEs after enriched.
+    Use as: WITH {enriched_cte()}, {segment_ctes()} SELECT ... FROM segmented
+    """
+    return """
+    csp_partners AS (
+        SELECT DISTINCT partner_id
+        FROM PROD_DB.CSP_GATEWAY_SERVICE_CSP_GATEWAY_SERVICE.CSP_ACCOUNT
+        WHERE csp_id NOT IN ('a0a6w1', 'a0a0b1')
+          AND partner_id IS NOT NULL
+          AND _fivetran_active
+    ),
+    segmented AS (
+        SELECT
+            e.*,
+            CASE
+                WHEN e.HOLDER_BUCKET IN ('wiom_warehouse', 'returned_to_wiom') THEN 'WIOM'
+                WHEN cp.partner_id IS NOT NULL THEN 'CSP'
+                WHEN e.PARTNER_ACCOUNT_ID IS NOT NULL THEN 'Ex-CSP'
+                ELSE 'WIOM'
+            END AS SEGMENT
+        FROM enriched e
+        LEFT JOIN csp_partners cp ON cp.partner_id = e.PARTNER_ACCOUNT_ID
+    )
+    """.strip()
+
+
 def enriched_cte() -> str:
     status_location_sql = query_store.get("status_location")
     recharge_expiry_sql = query_store.get("recharge_expiry")
