@@ -54,7 +54,7 @@ const AGING_ORDER = [
 ];
 
 async function fetchJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${BACKEND_ORIGIN}${path}`, { headers: authHeaders() });
+  const res = await fetch(path, { headers: authHeaders() });
   if (!res.ok) throw new Error(`${res.status} on ${path}`);
   return res.json();
 }

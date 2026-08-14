@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BACKEND_ORIGIN, authHeaders } from "@/lib/api";
+import { authHeaders } from "@/lib/api";
 import { KpiCard, SkeletonCard } from "@/components/KpiCard";
 import { ErrorBanner } from "@/components/ErrorBanner";
 
@@ -191,7 +191,7 @@ export default function ReconPage() {
     setSfData(null);
     setResult(null);
 
-    fetch(`${BACKEND_ORIGIN}/api/recon/snapshot.csv`, {
+    fetch(`/api/recon/snapshot.csv`, {
       headers: authHeaders(),
     })
       .then((res) => {

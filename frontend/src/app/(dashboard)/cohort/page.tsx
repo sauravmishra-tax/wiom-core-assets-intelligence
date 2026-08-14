@@ -51,7 +51,7 @@ export default function CohortPage() {
   const [deviceType, setDeviceType] = useState<string>("All");
 
   useEffect(() => {
-    fetch(`${BACKEND_ORIGIN}/api/cohort/matrix`, { headers: authHeaders() })
+    fetch(`/api/cohort/matrix`, { headers: authHeaders() })
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status}`);
         return r.json() as Promise<CohortData>;

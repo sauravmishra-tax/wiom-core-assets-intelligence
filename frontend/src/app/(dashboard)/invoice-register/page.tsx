@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BACKEND_ORIGIN, authHeaders } from "@/lib/api";
+import { authHeaders } from "@/lib/api";
 import { KpiCard, SkeletonCard } from "@/components/KpiCard";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { ExportButton } from "@/components/ExportButton";
@@ -53,7 +53,7 @@ export default function InvoiceRegisterPage() {
   const [showOnlyBlank, setShowOnlyBlank] = useState(false);
 
   useEffect(() => {
-    fetch(`${BACKEND_ORIGIN}/api/invoice-register/summary`, { headers: authHeaders() })
+    fetch(`/api/invoice-register/summary`, { headers: authHeaders() })
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status}`);
         return r.json() as Promise<RegisterData>;
