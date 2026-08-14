@@ -90,6 +90,16 @@ export default function AgeingPivotPage() {
     matrix[key][row.AGING_BUCKET] = (matrix[key][row.AGING_BUCKET] ?? 0) + row.DEVICE_COUNT;
   }
 
+  const visibleRowIds = data.segments.flatMap((seg) =>
+    data.statuses.filter((st) => visible.has(rowId(seg, st))).map((st) => rowId(seg, st))
+  );
+  const pivotColTotals: Record<string, number> = {};
+  let pivotGrandTotal = 0;
+  for (const b of data.buckets) {
+    pivotColTotals[b] = visibleRowIds.reduce((s, id) => s + (matrix[id]?.[b] ?? 0), 0);
+    pivotGrandTotal += pivotColTotals[b];
+  }
+
   return (
     <div className="space-y-6 p-8">
       <div className="flex items-start justify-between gap-4">
@@ -261,6 +271,7 @@ export default function AgeingPivotPage() {
                     {BUCKET_LABELS[b] ?? b}
                   </th>
                 ))}
+                <th className="p-2 text-center text-xs font-medium uppercase text-slate-200">Total</th>
               </tr>
             </thead>
           </table>
@@ -270,8 +281,9 @@ export default function AgeingPivotPage() {
                 <col style={{ width: "110px" }} />
                 <col style={{ width: "160px" }} />
                 {data.buckets.map((b) => (
-                  <col key={b} style={{ width: `${Math.floor(1030 / data.buckets.length)}px` }} />
+                  <col key={b} style={{ width: `${Math.floor(990 / data.buckets.length)}px` }} />
                 ))}
+                <col style={{ width: "80px" }} />
               </colgroup>
               <tbody>
                 {data.segments.map((seg) => {
@@ -281,7 +293,7 @@ export default function AgeingPivotPage() {
                     <Fragment key={seg}>
                       <tr className="border-t border-white/10">
                         <td
-                          colSpan={data.buckets.length + 2}
+                          colSpan={data.buckets.length + 3}
                           className="p-2 text-sm font-bold text-[#ff6fd8]"
                         >
                           {SEGMENT_LABELS[seg] ?? seg}
@@ -289,6 +301,7 @@ export default function AgeingPivotPage() {
                       </tr>
                       {rowsForSegment.map((st) => {
                         const cells = matrix[rowId(seg, st)] ?? {};
+                        const rowTotal = data.buckets.reduce((s, b) => s + (cells[b] ?? 0), 0);
                         return (
                           <tr key={rowId(seg, st)} className="border-b border-white/5">
                             <td className="p-2"></td>
@@ -298,12 +311,27 @@ export default function AgeingPivotPage() {
                                 {(cells[b] ?? 0).toLocaleString("en-IN")}
                               </td>
                             ))}
+                            <td className="p-2 text-center font-semibold text-slate-200 tabular-nums">
+                              {rowTotal.toLocaleString("en-IN")}
+                            </td>
                           </tr>
                         );
                       })}
                     </Fragment>
                   );
                 })}
+                {/* Column totals */}
+                <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+                  <td className="p-2 text-slate-300" colSpan={2}>TOTAL</td>
+                  {data.buckets.map((b) => (
+                    <td key={b} className="p-2 text-center tabular-nums text-slate-200">
+                      {pivotColTotals[b].toLocaleString("en-IN")}
+                    </td>
+                  ))}
+                  <td className="p-2 text-center font-bold text-white tabular-nums">
+                    {pivotGrandTotal.toLocaleString("en-IN")}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

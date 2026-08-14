@@ -235,6 +235,21 @@ export default function PartnersPage() {
                 <td className="p-2 text-right text-rose-400">{row.WRITTEN_OFF.toLocaleString("en-IN")}</td>
               </tr>
             ))}
+            <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+              <td className="p-2 text-slate-200">TOTAL</td>
+              <td className="p-2 text-right text-white tabular-nums">
+                {by_device_type.reduce((s, r) => s + r.DEVICE_COUNT, 0).toLocaleString("en-IN")}
+              </td>
+              <td className="p-2 text-right text-emerald-300 tabular-nums">
+                {by_device_type.reduce((s, r) => s + r.DEPLOYED, 0).toLocaleString("en-IN")}
+              </td>
+              <td className="p-2 text-right text-rose-300 tabular-nums">
+                {by_device_type.reduce((s, r) => s + r.LOST, 0).toLocaleString("en-IN")}
+              </td>
+              <td className="p-2 text-right text-rose-300 tabular-nums">
+                {by_device_type.reduce((s, r) => s + r.WRITTEN_OFF, 0).toLocaleString("en-IN")}
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

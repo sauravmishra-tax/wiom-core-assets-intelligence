@@ -534,6 +534,18 @@ function AgeingMatrix({ rows }: { rows: AgeingRow[] }) {
                 </tr>
               ));
             })}
+            {/* Column totals */}
+            <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+              <td className="p-2 text-slate-300 sticky left-0 bg-slate-900/80" colSpan={2}>TOTAL</td>
+              {allBuckets.map((b) => (
+                <td key={b} className="p-2 text-right tabular-nums text-slate-200">
+                  {fmt(rows.filter((r) => r.AGING_BUCKET === b).reduce((s, r) => s + r.DEVICE_COUNT, 0))}
+                </td>
+              ))}
+              <td className="p-2 text-right text-white tabular-nums">
+                {fmt(rows.reduce((s, r) => s + r.DEVICE_COUNT, 0))}
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>

@@ -69,6 +69,17 @@ export default function AgeingPage() {
     ...data.bucket_order.flatMap((b) => statuses.map((s) => matrix[b]?.[s] ?? 0))
   );
 
+  const rowTotals: Record<string, number> = {};
+  const colTotals: Record<string, number> = {};
+  let grandTotal = 0;
+  for (const status of statuses) {
+    rowTotals[status] = data.bucket_order.reduce((s, b) => s + (matrix[b]?.[status] ?? 0), 0);
+  }
+  for (const b of data.bucket_order) {
+    colTotals[b] = statuses.reduce((s, st) => s + (matrix[b]?.[st] ?? 0), 0);
+    grandTotal += colTotals[b];
+  }
+
   return (
     <div className="space-y-8 p-8">
       <div className="flex items-start justify-between gap-4">
@@ -112,8 +123,9 @@ export default function AgeingPage() {
             <colgroup>
               <col style={{ width: "160px" }} />
               {data.bucket_order.map((b) => (
-                <col key={b} style={{ width: `${Math.floor(740 / data.bucket_order.length)}px` }} />
+                <col key={b} style={{ width: `${Math.floor(700 / data.bucket_order.length)}px` }} />
               ))}
+              <col style={{ width: "80px" }} />
             </colgroup>
             <thead>
               <tr>
@@ -128,6 +140,7 @@ export default function AgeingPage() {
                     {BUCKET_LABELS[b] ?? b}
                   </th>
                 ))}
+                <th className="p-2 text-center text-xs font-medium uppercase text-slate-200">Total</th>
               </tr>
             </thead>
           </table>
@@ -136,8 +149,9 @@ export default function AgeingPage() {
               <colgroup>
                 <col style={{ width: "160px" }} />
                 {data.bucket_order.map((b) => (
-                  <col key={b} style={{ width: `${Math.floor(740 / data.bucket_order.length)}px` }} />
+                  <col key={b} style={{ width: `${Math.floor(700 / data.bucket_order.length)}px` }} />
                 ))}
+                <col style={{ width: "80px" }} />
               </colgroup>
               <tbody>
                 {statuses.map((status) => (
@@ -158,8 +172,23 @@ export default function AgeingPage() {
                         </td>
                       );
                     })}
+                    <td className="p-2 text-center text-xs font-bold text-slate-200 tabular-nums">
+                      {rowTotals[status].toLocaleString("en-IN")}
+                    </td>
                   </tr>
                 ))}
+                {/* Column totals */}
+                <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+                  <td className="p-2 text-xs uppercase text-slate-300">TOTAL</td>
+                  {data.bucket_order.map((b) => (
+                    <td key={b} className="p-2 text-center text-xs tabular-nums text-slate-200">
+                      {colTotals[b].toLocaleString("en-IN")}
+                    </td>
+                  ))}
+                  <td className="p-2 text-center text-xs font-bold text-white tabular-nums">
+                    {grandTotal.toLocaleString("en-IN")}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>

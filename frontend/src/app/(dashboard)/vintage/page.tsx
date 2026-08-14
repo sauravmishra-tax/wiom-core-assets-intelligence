@@ -215,6 +215,27 @@ export default function VintagePage() {
                     </td>
                   </tr>
                 ))}
+                {/* Column totals */}
+                <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+                  <td className="p-2 text-slate-300" colSpan={2}>TOTAL</td>
+                  <td className="p-2 text-right text-white tabular-nums">
+                    {data.rows.reduce((s, r) => s + r.TOTAL_PURCHASED, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-rose-300 tabular-nums">
+                    {data.rows.reduce((s, r) => s + r.WRITTEN_OFF, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-rose-300 tabular-nums">
+                    {data.rows.reduce((s, r) => s + r.LOST, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-slate-500">—</td>
+                  <td className="p-2 text-right text-emerald-300 tabular-nums">
+                    {data.rows.reduce((s, r) => s + r.STILL_DEPLOYED, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-slate-300 tabular-nums">
+                    {data.rows.reduce((s, r) => s + r.AGED_365_PLUS, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td></td>
+                </tr>
               </tbody>
             </table>
           </div>

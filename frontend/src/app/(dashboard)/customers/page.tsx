@@ -154,6 +154,37 @@ export default function CustomersPage() {
                     </td>
                   </tr>
                 ))}
+                {/* Column totals */}
+                <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+                  <td className="p-2 text-slate-200">
+                    TOTAL ({leaderboard.total_customers.toLocaleString("en-IN")} customers)
+                  </td>
+                  <td className="p-2 text-right text-white tabular-nums">
+                    {leaderboard.rows.reduce((s, r) => s + r.TOTAL_DEVICES, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-emerald-300 tabular-nums">
+                    {leaderboard.rows.reduce((s, r) => s + r.DEPLOYED, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-emerald-300 tabular-nums">
+                    {leaderboard.rows.reduce((s, r) => s + r.INSTALLED, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-rose-300 tabular-nums">
+                    {leaderboard.rows.reduce((s, r) => s + r.LOST, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-rose-300 tabular-nums">
+                    {leaderboard.rows.reduce((s, r) => s + r.WRITTEN_OFF, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-amber-300 tabular-nums">
+                    {leaderboard.rows.reduce((s, r) => s + r.IDLE, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-emerald-300 tabular-nums">
+                    {leaderboard.rows.reduce((s, r) => s + r.RECHARGE_ACTIVE, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-amber-300 tabular-nums">
+                    {leaderboard.rows.reduce((s, r) => s + r.RECHARGE_EXPIRED, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td></td>
+                </tr>
               </tbody>
             </table>
           </div>

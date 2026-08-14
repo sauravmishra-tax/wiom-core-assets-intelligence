@@ -269,6 +269,22 @@ export default function AssetRegisterPage() {
                       <td className="p-2 text-right text-amber-300">{pct(r.written_off_pct_to_date)}</td>
                     </tr>
                   ))}
+                  {/* Column totals */}
+                  <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+                    <td className="p-2 text-slate-200">TOTAL</td>
+                    {cohort.closures.map((c) => (
+                      <td key={c} className="p-2 text-right text-rose-300 tabular-nums">
+                        {n(rows.reduce((s, r) => s + (r.cumulative_written_off_by_closure[c] ?? 0), 0))}
+                      </td>
+                    ))}
+                    <td className="p-2 text-right text-white tabular-nums">
+                      {n(rows.reduce((s, r) => s + r.total_purchased, 0))}
+                    </td>
+                    <td className="p-2 text-right text-emerald-300 tabular-nums">
+                      {n(rows.reduce((s, r) => s + r.active, 0))}
+                    </td>
+                    <td className="p-2 text-right text-slate-500">—</td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -345,6 +361,28 @@ export default function AssetRegisterPage() {
                       </tr>
                     );
                   })}
+                  {/* Column totals */}
+                  {(() => {
+                    const grandTotal = fys.reduce((s, fy) => s + rowTotal(fy), 0);
+                    const grandCustomer = fys.reduce((s, fy) => s + locationTotal(fy, "Customer"), 0);
+                    return (
+                      <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+                        <td className="p-2 text-slate-200">TOTAL</td>
+                        {locations.map((l) =>
+                          recencies.map((r) => (
+                            <td key={`${l}-${r}`} className="p-2 text-right text-slate-200 tabular-nums">
+                              {n(fys.reduce((s, fy) => s + get(fy, l, r), 0))}
+                            </td>
+                          ))
+                        )}
+                        <td className="p-2 text-right text-white tabular-nums">{n(grandTotal)}</td>
+                        <td className="p-2 text-right text-slate-300 tabular-nums">{n(grandCustomer)}</td>
+                        <td className="p-2 text-right text-amber-300 tabular-nums">
+                          {grandTotal ? pct(Math.round((1000 * grandCustomer) / grandTotal) / 10) : "0%"}
+                        </td>
+                      </tr>
+                    );
+                  })()}
                 </tbody>
               </table>
             </div>
