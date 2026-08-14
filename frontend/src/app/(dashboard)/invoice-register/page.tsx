@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { authHeaders } from "@/lib/api";
+import { BACKEND_ORIGIN, authHeaders } from "@/lib/api";
 import { KpiCard, SkeletonCard } from "@/components/KpiCard";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { ExportButton } from "@/components/ExportButton";

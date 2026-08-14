@@ -252,8 +252,9 @@ export default function AgeingPivotPage() {
               <col style={{ width: "110px" }} />
               <col style={{ width: "160px" }} />
               {data.buckets.map((b) => (
-                <col key={b} style={{ width: `${Math.floor(1030 / data.buckets.length)}px` }} />
+                <col key={b} style={{ width: `${Math.floor(990 / data.buckets.length)}px` }} />
               ))}
+              <col style={{ width: "80px" }} />
             </colgroup>
             <thead>
               <tr>
