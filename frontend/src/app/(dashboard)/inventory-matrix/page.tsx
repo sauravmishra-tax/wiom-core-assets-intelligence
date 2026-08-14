@@ -55,6 +55,7 @@ const AGING_ORDER = [
 
 async function fetchJson<T>(path: string): Promise<T> {
   const res = await fetch(path, { headers: authHeaders() });
+  if (res.status === 401) { window.location.href = "/login"; throw new Error("401"); }
   if (!res.ok) throw new Error(`${res.status} on ${path}`);
   return res.json();
 }

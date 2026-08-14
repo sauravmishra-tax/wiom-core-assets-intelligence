@@ -16,15 +16,18 @@ def _matrix_sql(
     status: str | None = None,
 ) -> str:
     fc = _build_filter_clause(device_type, holder_bucket, status)
+    where = where_or_and(fc, existing_where=False)
     return f"""
-WITH {enriched_cte()}
-SELECT
-    AGING_BUCKET,
-    STATUS_NORMALIZED,
-    HOLDER_BUCKET,
-    COUNT(*) AS device_count
-FROM enriched{where_or_and(fc, existing_where=False)}
-GROUP BY 1, 2, 3
+WITH {enriched_cte()},
+filtered AS (SELECT * FROM enriched{where})
+SELECT AGING_BUCKET, STATUS_NORMALIZED, HOLDER_BUCKET, COUNT(*) AS device_count
+FROM filtered GROUP BY 1, 2, 3
+UNION ALL
+SELECT AGING_BUCKET, 'FINANCIAL_WO' AS STATUS_NORMALIZED, HOLDER_BUCKET, COUNT(*) AS device_count
+FROM filtered WHERE WRITE_OFF_DATE IS NOT NULL GROUP BY 1, 3
+UNION ALL
+SELECT AGING_BUCKET, 'NON_FINANCIAL_WO' AS STATUS_NORMALIZED, HOLDER_BUCKET, COUNT(*) AS device_count
+FROM filtered WHERE STATUS_NORMALIZED = 'WRITTEN_OFF' AND WRITE_OFF_DATE IS NULL GROUP BY 1, 3
 """
 
 

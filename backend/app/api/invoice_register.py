@@ -15,7 +15,8 @@ from app.services.warehouse_client import WarehouseClient, get_warehouse_client
 
 router = APIRouter(prefix="/api/invoice-register", tags=["invoice-register"])
 
-_SUMMARY_SQL = f"""
+def _summary_sql() -> str:
+    return f"""
 WITH {enriched_cte()}
 SELECT
     COALESCE(INVOICE_NUMBER, '(blank)') AS INVOICE_NUMBER,
@@ -29,10 +30,10 @@ SELECT
     DEVICE_TYPE_NORMALIZED,
     COUNT(*) AS TOTAL_PURCHASED,
     SUM(CASE WHEN WRITE_OFF_DATE IS NOT NULL THEN 1 ELSE 0 END) AS TOTAL_WRITTEN_OFF,
-    SUM(CASE WHEN YEAR(WRITE_OFF_DATE) = 2023 THEN 1 ELSE 0 END) AS WO_FY_2022_23,
-    SUM(CASE WHEN YEAR(WRITE_OFF_DATE) = 2024 THEN 1 ELSE 0 END) AS WO_FY_2023_24,
-    SUM(CASE WHEN YEAR(WRITE_OFF_DATE) = 2025 THEN 1 ELSE 0 END) AS WO_FY_2024_25,
-    SUM(CASE WHEN YEAR(WRITE_OFF_DATE) = 2026 THEN 1 ELSE 0 END) AS WO_FY_2025_26,
+    SUM(CASE WHEN (MONTH(WRITE_OFF_DATE) >= 4 AND YEAR(WRITE_OFF_DATE) = 2022) OR (MONTH(WRITE_OFF_DATE) < 4 AND YEAR(WRITE_OFF_DATE) = 2023) THEN 1 ELSE 0 END) AS WO_FY_2022_23,
+    SUM(CASE WHEN (MONTH(WRITE_OFF_DATE) >= 4 AND YEAR(WRITE_OFF_DATE) = 2023) OR (MONTH(WRITE_OFF_DATE) < 4 AND YEAR(WRITE_OFF_DATE) = 2024) THEN 1 ELSE 0 END) AS WO_FY_2023_24,
+    SUM(CASE WHEN (MONTH(WRITE_OFF_DATE) >= 4 AND YEAR(WRITE_OFF_DATE) = 2024) OR (MONTH(WRITE_OFF_DATE) < 4 AND YEAR(WRITE_OFF_DATE) = 2025) THEN 1 ELSE 0 END) AS WO_FY_2024_25,
+    SUM(CASE WHEN (MONTH(WRITE_OFF_DATE) >= 4 AND YEAR(WRITE_OFF_DATE) = 2025) OR (MONTH(WRITE_OFF_DATE) < 4 AND YEAR(WRITE_OFF_DATE) = 2026) THEN 1 ELSE 0 END) AS WO_FY_2025_26,
     COUNT(*) - SUM(CASE WHEN WRITE_OFF_DATE IS NOT NULL THEN 1 ELSE 0 END) AS REMAINING,
     SUM(CASE WHEN INVOICE_NUMBER IS NULL OR TRIM(INVOICE_NUMBER) = '' THEN 1 ELSE 0 END) AS BLANK_INVOICE_COUNT
 FROM enriched
@@ -43,7 +44,7 @@ ORDER BY MIN(INVOICE_DATE) ASC NULLS LAST, INVOICE_NUMBER
 
 @router.get("/summary")
 def get_invoice_summary(client: WarehouseClient = Depends(get_warehouse_client)) -> dict:
-    rows = client.query(_SUMMARY_SQL)
+    rows = client.query(_summary_sql())
     total_purchased = sum(r["TOTAL_PURCHASED"] for r in rows)
     total_wo = sum(r["TOTAL_WRITTEN_OFF"] for r in rows)
     total_remaining = sum(r["REMAINING"] for r in rows)
@@ -59,4 +60,4 @@ def get_invoice_summary(client: WarehouseClient = Depends(get_warehouse_client))
 
 @router.get("/summary.csv")
 def export_invoice_csv(client: WarehouseClient = Depends(get_warehouse_client)) -> Response:
-    return rows_to_csv_response(client.query(_SUMMARY_SQL), "invoice_register.csv")
+    return rows_to_csv_response(client.query(_summary_sql()), "invoice_register.csv")

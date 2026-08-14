@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { api, VintageMatrix } from "@/lib/api";
+import { BACKEND_ORIGIN, api, VintageMatrix } from "@/lib/api";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { ExportButton } from "@/components/ExportButton";
 import { SkeletonTable } from "@/components/KpiCard";
@@ -78,7 +78,7 @@ export default function VintagePage() {
             Purchase year = invoice_date from GRN record &middot; Router and ONT shown separately
           </p>
         </div>
-        <ExportButton href="/api/vintage/writeoff-matrix.csv" />
+        <ExportButton href={`${BACKEND_ORIGIN}/api/vintage/writeoff-matrix.csv`} />
       </div>
 
       <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-amber-200/90">
@@ -209,7 +209,7 @@ export default function VintagePage() {
                     </td>
                     <td className="p-2 text-right">
                       <ExportButton
-                        href={`/api/devices/export/full.csv?invoice_year=${row.INVOICE_YEAR}&device_type=${row.DEVICE_TYPE_NORMALIZED}`}
+                        href={`${BACKEND_ORIGIN}/api/devices/export/full.csv?invoice_year=${row.INVOICE_YEAR}&device_type=${row.DEVICE_TYPE_NORMALIZED}`}
                         label="Devices"
                       />
                     </td>

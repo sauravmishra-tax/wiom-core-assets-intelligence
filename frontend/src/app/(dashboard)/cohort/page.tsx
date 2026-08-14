@@ -53,10 +53,11 @@ export default function CohortPage() {
   useEffect(() => {
     fetch(`/api/cohort/matrix`, { headers: authHeaders() })
       .then((r) => {
+        if (r.status === 401) { window.location.href = "/login"; return null; }
         if (!r.ok) throw new Error(`${r.status}`);
         return r.json() as Promise<CohortData>;
       })
-      .then(setData)
+      .then((d) => { if (d) setData(d); })
       .catch((e) => setError(String(e.message ?? e)));
   }, []);
 

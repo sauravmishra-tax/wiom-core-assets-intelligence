@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { api, AgeingSegmentMatrix } from "@/lib/api";
+import { BACKEND_ORIGIN, api, AgeingSegmentMatrix } from "@/lib/api";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { ExportButton } from "@/components/ExportButton";
 import { SkeletonTable } from "@/components/KpiCard";
@@ -106,7 +106,7 @@ export default function AgeingPivotPage() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-white">Ageing Pivot &mdash; by Segment</h1>
-            <ExportButton href={`/api/ageing/segment-matrix.csv${queryString}`} />
+            <ExportButton href={`${BACKEND_ORIGIN}/api/ageing/segment-matrix.csv${queryString}`} />
           </div>
           <p className="mt-1 text-sm text-slate-500">
             WIOM = device currently at wiom_warehouse/returned_to_wiom (wins regardless of

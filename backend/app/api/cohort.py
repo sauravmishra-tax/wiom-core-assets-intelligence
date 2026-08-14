@@ -18,7 +18,8 @@ from app.services.warehouse_client import WarehouseClient, get_warehouse_client
 
 router = APIRouter(prefix="/api/cohort", tags=["cohort"])
 
-_MATRIX_SQL = f"""
+def _matrix_sql() -> str:
+    return f"""
 WITH {enriched_cte()}
 SELECT
     DEVICE_TYPE_NORMALIZED,
@@ -52,7 +53,7 @@ ORDER BY DEVICE_TYPE_NORMALIZED, PURCHASE_FY_SORT, WRITEOFF_FY_SORT
 
 @router.get("/matrix")
 def get_cohort_matrix(client: WarehouseClient = Depends(get_warehouse_client)) -> dict:
-    rows = client.query(_MATRIX_SQL)
+    rows = client.query(_matrix_sql())
 
     # Collect all unique purchase FYs and write-off FYs (sorted)
     pfy_set: dict[str, int] = {}
@@ -73,4 +74,4 @@ def get_cohort_matrix(client: WarehouseClient = Depends(get_warehouse_client)) -
 
 @router.get("/matrix.csv")
 def export_cohort_csv(client: WarehouseClient = Depends(get_warehouse_client)) -> Response:
-    return rows_to_csv_response(client.query(_MATRIX_SQL), "cohort_matrix.csv")
+    return rows_to_csv_response(client.query(_matrix_sql()), "cohort_matrix.csv")

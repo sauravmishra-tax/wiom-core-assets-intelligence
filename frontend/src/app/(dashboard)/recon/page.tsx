@@ -50,21 +50,43 @@ function xlSerialToDate(serial: number | null | undefined): string {
   return d.toISOString().slice(0, 10);
 }
 
-// ---- CSV parser (no external lib needed) -----------------------------------
+// ---- CSV parser (RFC 4180 compliant) ---------------------------------------
+
+function parseCsvLine(line: string): string[] {
+  const fields: string[] = [];
+  let i = 0;
+  while (i <= line.length) {
+    if (line[i] === '"') {
+      let val = "";
+      i++;
+      while (i < line.length) {
+        if (line[i] === '"' && line[i + 1] === '"') { val += '"'; i += 2; }
+        else if (line[i] === '"') { i++; break; }
+        else { val += line[i++]; }
+      }
+      fields.push(val);
+      if (line[i] === ",") i++;
+    } else {
+      const end = line.indexOf(",", i);
+      if (end === -1) { fields.push(line.slice(i)); break; }
+      fields.push(line.slice(i, end));
+      i = end + 1;
+    }
+  }
+  return fields;
+}
 
 function parseCsv(text: string): Record<string, string>[] {
-  const lines = text.split("\n");
+  const lines = text.split(/\r?\n/);
   if (lines.length < 2) return [];
-  const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+  const headers = parseCsvLine(lines[0]).map((h) => h.trim());
   const rows: Record<string, string>[] = [];
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
-    const vals = line.split(",");
+    const vals = parseCsvLine(line);
     const row: Record<string, string> = {};
-    headers.forEach((h, j) => {
-      row[h] = (vals[j] ?? "").replace(/^"|"$/g, "").trim();
-    });
+    headers.forEach((h, j) => { row[h] = (vals[j] ?? "").trim(); });
     rows.push(row);
   }
   return rows;

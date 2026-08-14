@@ -1,11 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, AgeingMatrix } from "@/lib/api";
+import { BACKEND_ORIGIN, api, AgeingMatrix } from "@/lib/api";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { ExportButton } from "@/components/ExportButton";
 import { SkeletonCard, SkeletonTable } from "@/components/KpiCard";
 import { useGlobalFilters } from "@/components/GlobalFilters";
+
+const STATUS_LABELS: Record<string, string> = {
+  FINANCIAL_WO: "Financial Write-off",
+  NON_FINANCIAL_WO: "Non-Financial Write-off",
+};
 
 const BUCKET_LABELS: Record<string, string> = {
   active: "Active",
@@ -89,7 +94,7 @@ export default function AgeingPage() {
             Ageing = CURRENT_DATE &minus; LAST_RECHARGE_EXPIRY, computed live on every request
           </p>
         </div>
-        <ExportButton href="/api/ageing/matrix.csv" />
+        <ExportButton href={`${BACKEND_ORIGIN}/api/ageing/matrix.csv`} />
       </div>
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-12">
@@ -156,7 +161,7 @@ export default function AgeingPage() {
               <tbody>
                 {statuses.map((status) => (
                   <tr key={status}>
-                    <td className="p-2 text-xs font-medium text-slate-300">{status}</td>
+                    <td className="p-2 text-xs font-medium text-slate-300">{STATUS_LABELS[status] ?? status}</td>
                     {data.bucket_order.map((b) => {
                       const value = matrix[b]?.[status] ?? 0;
                       return (

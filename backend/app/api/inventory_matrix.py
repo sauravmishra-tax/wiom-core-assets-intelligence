@@ -23,14 +23,16 @@ from app.services.warehouse_client import WarehouseClient, get_warehouse_client
 
 router = APIRouter(prefix="/api/inventory-matrix", tags=["inventory-matrix"])
 
-_PFX = f"""WITH {enriched_cte()},
+def _pfx() -> str:
+    return f"""WITH {enriched_cte()},
 {segment_ctes()}"""
 
-_STATUS_SQL = f"""
-{_PFX}
+
+def _status_sql() -> str:
+    return f"""
+{_pfx()}
 SELECT
     SEGMENT,
-    -- For CSP/Ex-CSP show partner_id as sub-identifier; WIOM has no partner
     CASE
         WHEN SEGMENT IN ('CSP', 'Ex-CSP') AND PARTNER_ACCOUNT_ID IS NOT NULL
              THEN PARTNER_ACCOUNT_ID
@@ -44,8 +46,10 @@ GROUP BY 1, 2, 3, 4
 ORDER BY SEGMENT, PARTNER_SUB NULLS LAST, DEVICE_TYPE_NORMALIZED, DEVICE_COUNT DESC
 """
 
-_STATUS_AGG_SQL = f"""
-{_PFX}
+
+def _status_agg_sql() -> str:
+    return f"""
+{_pfx()}
 SELECT
     SEGMENT,
     DEVICE_TYPE_NORMALIZED,
@@ -56,8 +60,10 @@ GROUP BY 1, 2, 3
 ORDER BY SEGMENT, DEVICE_TYPE_NORMALIZED, DEVICE_COUNT DESC
 """
 
-_WRITEOFF_OVERLAP_SQL = f"""
-{_PFX}
+
+def _writeoff_overlap_sql() -> str:
+    return f"""
+{_pfx()}
 SELECT
     SEGMENT,
     CASE
@@ -80,8 +86,10 @@ GROUP BY 1, 2, 3
 ORDER BY 1, 2 NULLS LAST, 3
 """
 
-_AGEING_SQL = f"""
-{_PFX}
+
+def _ageing_sql() -> str:
+    return f"""
+{_pfx()}
 SELECT
     SEGMENT,
     DEVICE_TYPE_NORMALIZED,
@@ -92,8 +100,10 @@ GROUP BY 1, 2, 3
 ORDER BY 1, 2
 """
 
-_INVOICE_FY_SQL = f"""
-{_PFX}
+
+def _invoice_fy_sql() -> str:
+    return f"""
+{_pfx()}
 SELECT
     SEGMENT,
     DEVICE_TYPE_NORMALIZED,
@@ -120,34 +130,33 @@ def get_status_matrix(
     client: WarehouseClient = Depends(get_warehouse_client),
 ) -> dict:
     """sub=true returns per-partner rows; sub=false aggregates to segment level."""
-    sql = _STATUS_SQL if sub else _STATUS_AGG_SQL
-    rows = client.query(sql)
+    rows = client.query(_status_sql() if sub else _status_agg_sql())
     return {"rows": rows}
 
 
 @router.get("/writeoff-overlap")
 def get_writeoff_overlap(client: WarehouseClient = Depends(get_warehouse_client)) -> dict:
-    rows = client.query(_WRITEOFF_OVERLAP_SQL)
+    rows = client.query(_writeoff_overlap_sql())
     return {"rows": rows}
 
 
 @router.get("/ageing")
 def get_ageing_matrix(client: WarehouseClient = Depends(get_warehouse_client)) -> dict:
-    rows = client.query(_AGEING_SQL)
+    rows = client.query(_ageing_sql())
     return {"rows": rows}
 
 
 @router.get("/invoice-fy")
 def get_invoice_fy_matrix(client: WarehouseClient = Depends(get_warehouse_client)) -> dict:
-    rows = client.query(_INVOICE_FY_SQL)
+    rows = client.query(_invoice_fy_sql())
     return {"rows": rows}
 
 
 @router.get("/status.csv")
 def export_status_csv(client: WarehouseClient = Depends(get_warehouse_client)) -> Response:
-    return rows_to_csv_response(client.query(_STATUS_SQL), "inventory_matrix_status.csv")
+    return rows_to_csv_response(client.query(_status_sql()), "inventory_matrix_status.csv")
 
 
 @router.get("/writeoff-overlap.csv")
 def export_writeoff_csv(client: WarehouseClient = Depends(get_warehouse_client)) -> Response:
-    return rows_to_csv_response(client.query(_WRITEOFF_OVERLAP_SQL), "writeoff_overlap.csv")
+    return rows_to_csv_response(client.query(_writeoff_overlap_sql()), "writeoff_overlap.csv")
