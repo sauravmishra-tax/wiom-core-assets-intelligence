@@ -427,31 +427,36 @@ function WriteoffOverlap({ rows, exportHref }: { rows: OverlapRow[]; exportHref:
               const segRow = bySegment[seg];
               const dtRows = dtBySegment[seg] ?? [];
               if (!segRow) return null;
-              return [
-                // Device type sub-rows
-                ...dtRows.map((row) => (
-                  <tr key={`${seg}-${row.DEVICE_TYPE_NORMALIZED}`} className="border-b border-white/5 hover:bg-white/5">
-                    <td className="p-2 sticky left-0 bg-slate-900/60" />
-                    <td className="p-2 text-slate-400">{row.DEVICE_TYPE_NORMALIZED}</td>
+              return (
+                <>
+                  {dtRows.map((row, dtIdx) => (
+                    <tr key={`${seg}-${row.DEVICE_TYPE_NORMALIZED}`} className="border-b border-white/5 hover:bg-white/5">
+                      {dtIdx === 0 && (
+                        <td
+                          className="p-2 font-bold text-slate-200 sticky left-0 bg-slate-900/60 align-top"
+                          rowSpan={dtRows.length + 1}
+                        >
+                          {seg}
+                        </td>
+                      )}
+                      <td className="p-2 text-slate-400">{row.DEVICE_TYPE_NORMALIZED}</td>
+                      {cols.map((c) => (
+                        <td key={c.key} className={`p-2 text-right tabular-nums ${c.color}`}>
+                          {fmt(row[c.key as keyof OverlapRow] as number)}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                  <tr key={`${seg}-total`} className="border-b border-white/10 bg-white/5 font-semibold">
+                    <td className="p-2 text-slate-300">Subtotal</td>
                     {cols.map((c) => (
                       <td key={c.key} className={`p-2 text-right tabular-nums ${c.color}`}>
-                        {fmt(row[c.key as keyof OverlapRow] as number)}
+                        {fmt(segRow[c.key as keyof OverlapRow] as number)}
                       </td>
                     ))}
                   </tr>
-                )),
-                // Segment total row
-                <tr key={`${seg}-total`} className="border-b border-white/10 bg-white/5 font-semibold">
-                  <td className="p-2 text-slate-200 sticky left-0 bg-slate-800/60" colSpan={2}>
-                    {seg} — Subtotal
-                  </td>
-                  {cols.map((c) => (
-                    <td key={c.key} className={`p-2 text-right tabular-nums ${c.color}`}>
-                      {fmt(segRow[c.key as keyof OverlapRow] as number)}
-                    </td>
-                  ))}
-                </tr>,
-              ];
+                </>
+              );
             })}
             {/* Grand total */}
             <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
