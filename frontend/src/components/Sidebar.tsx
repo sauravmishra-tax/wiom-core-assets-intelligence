@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { href: "/partners", label: "Partners & CSP", icon: "⚑" },
   { href: "/warehouses", label: "Warehouses", icon: "▦" },
   { href: "/lost-devices", label: "Lost Devices", icon: "⚠" },
+  { href: "/recon", label: "Recon (FAR vs SSOT)", icon: "⇄" },
   { href: "/customers", label: "Customers", icon: "◉" },
   { href: "/search", label: "Device Search", icon: "⌕" },
   { href: "/schema-config", label: "Schema Config", icon: "⚙", adminOnly: true },
