@@ -54,9 +54,13 @@ def get_ageing_matrix(
     computed at query time every call - never stored, always current."""
     rows = _ordered_rows(client, device_type, holder_bucket, status)
 
+    # FINANCIAL_WO / NON_FINANCIAL_WO are subsets of WRITTEN_OFF — exclude from
+    # bucket totals to avoid double-counting the same devices.
+    _WO_SPLITS = {"FINANCIAL_WO", "NON_FINANCIAL_WO"}
     totals: dict[str, int] = {b: 0 for b in AGING_BUCKET_ORDER}
     for row in rows:
-        totals[row["AGING_BUCKET"]] = totals.get(row["AGING_BUCKET"], 0) + row["DEVICE_COUNT"]
+        if row["STATUS_NORMALIZED"] not in _WO_SPLITS:
+            totals[row["AGING_BUCKET"]] = totals.get(row["AGING_BUCKET"], 0) + row["DEVICE_COUNT"]
 
     return {"bucket_order": AGING_BUCKET_ORDER, "totals_by_bucket": totals, "detail": rows}
 

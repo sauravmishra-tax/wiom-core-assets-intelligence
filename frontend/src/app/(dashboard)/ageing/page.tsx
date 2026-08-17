@@ -63,6 +63,7 @@ export default function AgeingPage() {
     </div>
   );
 
+  const WO_SPLITS = new Set(["FINANCIAL_WO", "NON_FINANCIAL_WO"]);
   const statuses = Array.from(new Set(data.detail.map((r) => r.STATUS_NORMALIZED))).sort();
   const matrix: Record<string, Record<string, number>> = {};
   for (const row of data.detail) {
@@ -81,7 +82,8 @@ export default function AgeingPage() {
     rowTotals[status] = data.bucket_order.reduce((s, b) => s + (matrix[b]?.[status] ?? 0), 0);
   }
   for (const b of data.bucket_order) {
-    colTotals[b] = statuses.reduce((s, st) => s + (matrix[b]?.[st] ?? 0), 0);
+    // exclude WO splits from column totals to avoid double-counting
+    colTotals[b] = statuses.filter((st) => !WO_SPLITS.has(st)).reduce((s, st) => s + (matrix[b]?.[st] ?? 0), 0);
     grandTotal += colTotals[b];
   }
 
