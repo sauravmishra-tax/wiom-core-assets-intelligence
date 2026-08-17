@@ -80,7 +80,8 @@ export default function CohortPage() {
 
   for (const row of filteredRows) {
     if (!matrix.has(row.PURCHASE_FY)) matrix.set(row.PURCHASE_FY, new Map());
-    matrix.get(row.PURCHASE_FY)!.set(row.WRITEOFF_FY, row.DEVICE_COUNT);
+    const pfyMap = matrix.get(row.PURCHASE_FY)!;
+    pfyMap.set(row.WRITEOFF_FY, (pfyMap.get(row.WRITEOFF_FY) ?? 0) + row.DEVICE_COUNT);
     rowTotals.set(row.PURCHASE_FY, (rowTotals.get(row.PURCHASE_FY) ?? 0) + row.DEVICE_COUNT);
     colTotals.set(row.WRITEOFF_FY, (colTotals.get(row.WRITEOFF_FY) ?? 0) + row.DEVICE_COUNT);
     grand += row.DEVICE_COUNT;
