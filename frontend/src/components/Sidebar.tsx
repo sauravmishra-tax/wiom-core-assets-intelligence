@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { href: "/cohort", label: "Cohort View", icon: "◫" },
   { href: "/invoice-register", label: "Invoice Register", icon: "▤" },
   { href: "/customers", label: "Customers", icon: "◉" },
+  { href: "/cx-ageing", label: "CX Ageing", icon: "◷" },
   { href: "/search", label: "Device Search", icon: "⌕" },
   { href: "/schema-config", label: "Schema Config", icon: "⚙", adminOnly: true },
   { href: "/users", label: "Users", icon: "◈", adminOnly: true },
