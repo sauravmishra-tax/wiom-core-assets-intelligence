@@ -24,7 +24,8 @@ SELECT
     SUM(CASE WHEN STATUS_NORMALIZED = 'WRITTEN_OFF' AND HOLDER_BUCKET = 'customer' THEN 1 ELSE 0 END) AS written_off,
     SUM(CASE WHEN STATUS_NORMALIZED = 'IDLE' AND HOLDER_BUCKET = 'customer' THEN 1 ELSE 0 END) AS idle,
     SUM(CASE WHEN AGING_BUCKET = 'active' AND HOLDER_BUCKET = 'customer' THEN 1 ELSE 0 END) AS recharge_active,
-    SUM(CASE WHEN AGING_BUCKET NOT IN ('active', 'no_recharge_history') AND HOLDER_BUCKET = 'customer' THEN 1 ELSE 0 END) AS recharge_expired
+    SUM(CASE WHEN AGING_BUCKET NOT IN ('active', 'no_recharge_history') AND HOLDER_BUCKET = 'customer' THEN 1 ELSE 0 END) AS recharge_expired,
+    COUNT(DISTINCT CASE WHEN CUSTOMER_ACCOUNT_ID IS NOT NULL AND HOLDER_BUCKET = 'customer' THEN CUSTOMER_ACCOUNT_ID END) AS total_customers
 FROM enriched{where_or_and(fc, existing_where=False)}
 """
 
@@ -59,21 +60,6 @@ ORDER BY TOTAL_DEVICES DESC
 """
 
 
-def _total_customers_sql(
-    device_type: str | None = None,
-    holder_bucket: str | None = None,
-    status: str | None = None,
-) -> str:
-    fc = _build_filter_clause(device_type, holder_bucket, status)
-    extra = f" {fc}" if fc else ""
-    return f"""
-WITH {enriched_cte()}
-SELECT COUNT(DISTINCT CUSTOMER_ACCOUNT_ID) AS TOTAL
-FROM enriched
-WHERE CUSTOMER_ACCOUNT_ID IS NOT NULL
-  AND HOLDER_BUCKET = 'customer'{extra}
-"""
-
 
 @router.get("/summary")
 def get_customer_summary(
@@ -94,8 +80,7 @@ def get_customer_summary(
     kpi_rows = client.query(_kpi_sql(device_type, holder_bucket, status))
     kpis = kpi_rows[0] if kpi_rows else {}
     leaderboard_rows = client.query(_leaderboard_sql(limit, device_type, holder_bucket, status))
-    total_rows = client.query(_total_customers_sql(device_type, holder_bucket, status))
-    total_customers = total_rows[0]["TOTAL"] if total_rows else len(leaderboard_rows)
+    total_customers = kpis.get("TOTAL_CUSTOMERS") or len(leaderboard_rows)
     return {
         "kpis": {
             "total_customer_devices": kpis.get("TOTAL_CUSTOMER_DEVICES"),
