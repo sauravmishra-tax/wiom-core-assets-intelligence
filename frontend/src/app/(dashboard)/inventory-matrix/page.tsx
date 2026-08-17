@@ -76,7 +76,8 @@ function pivotStatus(rows: StatusRow[]) {
   for (const r of rows) {
     const key: Key = `${r.SEGMENT}|${r.DEVICE_TYPE_NORMALIZED}`;
     if (!map.has(key)) map.set(key, new Map());
-    map.get(key)!.set(r.STATUS_NORMALIZED, r.DEVICE_COUNT);
+    const innerMap = map.get(key)!;
+    innerMap.set(r.STATUS_NORMALIZED, (innerMap.get(r.STATUS_NORMALIZED) ?? 0) + r.DEVICE_COUNT);
     totals.seg.set(
       r.SEGMENT,
       (totals.seg.get(r.SEGMENT) ?? 0) + r.DEVICE_COUNT
@@ -499,7 +500,8 @@ function AgeingMatrix({ rows }: { rows: AgeingRow[] }) {
   for (const row of rows) {
     data[row.SEGMENT] ??= {};
     data[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED] ??= {};
-    data[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED][row.AGING_BUCKET] = row.DEVICE_COUNT;
+    data[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED][row.AGING_BUCKET] =
+      (data[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED][row.AGING_BUCKET] ?? 0) + row.DEVICE_COUNT;
     segTotals[row.SEGMENT] = (segTotals[row.SEGMENT] ?? 0) + row.DEVICE_COUNT;
     dtTotals[row.SEGMENT] ??= {};
     dtTotals[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED] =
@@ -575,7 +577,8 @@ function InvoiceFyMatrix({ rows }: { rows: InvoiceFyRow[] }) {
   for (const row of rows) {
     data[row.SEGMENT] ??= {};
     data[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED] ??= {};
-    data[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED][row.INVOICE_FY] = row.DEVICE_COUNT;
+    data[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED][row.INVOICE_FY] =
+      (data[row.SEGMENT][row.DEVICE_TYPE_NORMALIZED][row.INVOICE_FY] ?? 0) + row.DEVICE_COUNT;
     segTotals[row.SEGMENT] = (segTotals[row.SEGMENT] ?? 0) + row.DEVICE_COUNT;
   }
 
