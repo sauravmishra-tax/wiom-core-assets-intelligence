@@ -267,6 +267,8 @@ export interface CustomerKpis {
   installed: number;
   lost: number;
   written_off: number;
+  financial_wo: number;
+  non_financial_wo: number;
   idle: number;
   recharge_active: number;
   recharge_expired: number;
@@ -279,6 +281,8 @@ export interface CustomerRow {
   INSTALLED: number;
   LOST: number;
   WRITTEN_OFF: number;
+  FINANCIAL_WO: number;
+  NON_FINANCIAL_WO: number;
   IDLE: number;
   RECHARGE_ACTIVE: number;
   RECHARGE_EXPIRED: number;

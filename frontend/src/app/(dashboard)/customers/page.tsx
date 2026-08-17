@@ -10,14 +10,16 @@ import { useGlobalFilters } from "@/components/GlobalFilters";
 
 const COLS: Array<{ width: string; align?: "right" }> = [
   { width: "200px" },
+  { width: "100px", align: "right" },
+  { width: "100px", align: "right" },
+  { width: "100px", align: "right" },
+  { width: "100px", align: "right" },
   { width: "110px", align: "right" },
-  { width: "110px", align: "right" },
-  { width: "110px", align: "right" },
-  { width: "110px", align: "right" },
-  { width: "110px", align: "right" },
-  { width: "110px", align: "right" },
-  { width: "130px", align: "right" },
-  { width: "130px", align: "right" },
+  { width: "120px", align: "right" },
+  { width: "140px", align: "right" },
+  { width: "100px", align: "right" },
+  { width: "120px", align: "right" },
+  { width: "120px", align: "right" },
   { width: "110px" },
 ];
 
@@ -79,6 +81,8 @@ export default function CustomersPage() {
         <KpiCard label="Installed" value={kpis.installed} tone="success" />
         <KpiCard label="Lost" value={kpis.lost} tone="danger" />
         <KpiCard label="Written off" value={kpis.written_off} tone="danger" />
+        <KpiCard label="Financial WO" value={kpis.financial_wo} tone="danger" />
+        <KpiCard label="Non-Financial WO" value={kpis.non_financial_wo} tone="danger" />
         <KpiCard label="Idle" value={kpis.idle} tone="warning" />
         <KpiCard label="Recharge Active" value={kpis.recharge_active} tone="success" />
         <KpiCard label="Recharge Expired" value={kpis.recharge_expired} tone="warning" />
@@ -103,6 +107,8 @@ export default function CustomersPage() {
                 <th className="p-2 text-right">Installed</th>
                 <th className="p-2 text-right">Lost</th>
                 <th className="p-2 text-right">Written Off</th>
+                <th className="p-2 text-right">Financial WO</th>
+                <th className="p-2 text-right">Non-Financial WO</th>
                 <th className="p-2 text-right">Idle</th>
                 <th className="p-2 text-right">Recharge Active</th>
                 <th className="p-2 text-right">Recharge Expired</th>
@@ -136,6 +142,12 @@ export default function CustomersPage() {
                     </td>
                     <td className="p-2 text-right text-rose-400">
                       {row.WRITTEN_OFF.toLocaleString("en-IN")}
+                    </td>
+                    <td className="p-2 text-right text-rose-400">
+                      {row.FINANCIAL_WO.toLocaleString("en-IN")}
+                    </td>
+                    <td className="p-2 text-right text-rose-400">
+                      {row.NON_FINANCIAL_WO.toLocaleString("en-IN")}
                     </td>
                     <td className="p-2 text-right text-amber-300">
                       {row.IDLE.toLocaleString("en-IN")}
@@ -173,6 +185,12 @@ export default function CustomersPage() {
                   </td>
                   <td className="p-2 text-right text-rose-300 tabular-nums">
                     {leaderboard.rows.reduce((s, r) => s + r.WRITTEN_OFF, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-rose-300 tabular-nums">
+                    {leaderboard.rows.reduce((s, r) => s + r.FINANCIAL_WO, 0).toLocaleString("en-IN")}
+                  </td>
+                  <td className="p-2 text-right text-rose-300 tabular-nums">
+                    {leaderboard.rows.reduce((s, r) => s + r.NON_FINANCIAL_WO, 0).toLocaleString("en-IN")}
                   </td>
                   <td className="p-2 text-right text-amber-300 tabular-nums">
                     {leaderboard.rows.reduce((s, r) => s + r.IDLE, 0).toLocaleString("en-IN")}

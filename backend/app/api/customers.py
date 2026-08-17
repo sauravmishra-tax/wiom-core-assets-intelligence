@@ -25,6 +25,8 @@ SELECT
     SUM(CASE WHEN STATUS_NORMALIZED = 'IDLE' AND HOLDER_BUCKET = 'customer' THEN 1 ELSE 0 END) AS idle,
     SUM(CASE WHEN AGING_BUCKET = 'active' AND HOLDER_BUCKET = 'customer' THEN 1 ELSE 0 END) AS recharge_active,
     SUM(CASE WHEN AGING_BUCKET NOT IN ('active', 'no_recharge_history') AND HOLDER_BUCKET = 'customer' THEN 1 ELSE 0 END) AS recharge_expired,
+    SUM(CASE WHEN WRITE_OFF_DATE IS NOT NULL AND HOLDER_BUCKET = 'customer' THEN 1 ELSE 0 END) AS financial_wo,
+    SUM(CASE WHEN STATUS_NORMALIZED = 'WRITTEN_OFF' AND WRITE_OFF_DATE IS NULL AND HOLDER_BUCKET = 'customer' THEN 1 ELSE 0 END) AS non_financial_wo,
     COUNT(DISTINCT CASE WHEN CUSTOMER_ACCOUNT_ID IS NOT NULL AND HOLDER_BUCKET = 'customer' THEN CUSTOMER_ACCOUNT_ID END) AS total_customers
 FROM enriched{where_or_and(fc, existing_where=False)}
 """
@@ -48,6 +50,8 @@ SELECT
     SUM(CASE WHEN STATUS_NORMALIZED = 'INSTALLED' THEN 1 ELSE 0 END) AS INSTALLED,
     SUM(CASE WHEN STATUS_NORMALIZED = 'LOST' THEN 1 ELSE 0 END) AS LOST,
     SUM(CASE WHEN STATUS_NORMALIZED = 'WRITTEN_OFF' THEN 1 ELSE 0 END) AS WRITTEN_OFF,
+    SUM(CASE WHEN WRITE_OFF_DATE IS NOT NULL THEN 1 ELSE 0 END) AS FINANCIAL_WO,
+    SUM(CASE WHEN STATUS_NORMALIZED = 'WRITTEN_OFF' AND WRITE_OFF_DATE IS NULL THEN 1 ELSE 0 END) AS NON_FINANCIAL_WO,
     SUM(CASE WHEN STATUS_NORMALIZED = 'IDLE' THEN 1 ELSE 0 END) AS IDLE,
     SUM(CASE WHEN AGING_BUCKET = 'active' THEN 1 ELSE 0 END) AS RECHARGE_ACTIVE,
     SUM(CASE WHEN AGING_BUCKET NOT IN ('active', 'no_recharge_history') THEN 1 ELSE 0 END) AS RECHARGE_EXPIRED
@@ -88,6 +92,8 @@ def get_customer_summary(
             "installed": kpis.get("INSTALLED"),
             "lost": kpis.get("LOST"),
             "written_off": kpis.get("WRITTEN_OFF"),
+            "financial_wo": kpis.get("FINANCIAL_WO"),
+            "non_financial_wo": kpis.get("NON_FINANCIAL_WO"),
             "idle": kpis.get("IDLE"),
             "recharge_active": kpis.get("RECHARGE_ACTIVE"),
             "recharge_expired": kpis.get("RECHARGE_EXPIRED"),
