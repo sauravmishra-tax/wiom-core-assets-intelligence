@@ -216,7 +216,9 @@ export default function CohortPage() {
                         </td>
                       );
                     })}
-                    <td className="p-2 text-right tabular-nums text-slate-400">{fmt(notWo)}</td>
+                    <td className="p-2 text-right tabular-nums text-slate-400">
+                      {viewMode === "pct" ? pct(notWo, purchased) : fmt(notWo)}
+                    </td>
                     <td className="p-2 text-right tabular-nums font-semibold text-slate-200">{fmt(purchased)}</td>
                   </tr>
                 );
