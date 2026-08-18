@@ -96,7 +96,7 @@ export default function AgeingPage() {
             Ageing = CURRENT_DATE &minus; LAST_RECHARGE_EXPIRY, computed live on every request
           </p>
         </div>
-        <ExportButton href={`${BACKEND_ORIGIN}/api/ageing/matrix.csv`} />
+        <ExportButton href={`${BACKEND_ORIGIN}/api/devices/export/full.csv?aging_bucket=active`} label="Export Active Devices" />
       </div>
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-12">
