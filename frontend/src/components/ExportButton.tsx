@@ -24,7 +24,7 @@ export function ExportButton({ href, label = "Export CSV" }: { href: string; lab
       // Also hits the backend directly (BACKEND_ORIGIN), not the same-origin
       // /api/* path Next.js rewrites - that proxy times out around 30s, well
       // under how long a full/bulk CSV export can take.
-      const res = await fetch(`${BACKEND_ORIGIN}${href}`, { headers: authHeaders() });
+      const res = await fetch(href, { headers: authHeaders() });
       if (!res.ok) {
         const body = await res.text().catch(() => "");
         throw new Error(`Export failed (${res.status}): ${body.slice(0, 200)}`);
