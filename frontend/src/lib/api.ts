@@ -132,7 +132,7 @@ export type DeviceProfile = Record<string, string | number | null>;
 
 export interface DeviceHistoryEvent {
   EVENT_AT: string | null;
-  SOURCE: "custody" | "inventory";
+  SOURCE: "custody" | "inventory" | "netbox";
   EVENT_TYPE: string | null;
   FROM_STATE: string | null;
   TO_STATE: string | null;
@@ -142,6 +142,8 @@ export interface DeviceHistoryEvent {
   CSP_ID: string | null;
   CUSTOMER_ID: string | null;
   EPISODE_ID: string | null;
+  IDLE_DAYS?: number | null;
+  CONNECTION_ID?: string | null;
 }
 
 export interface DeviceHistory {

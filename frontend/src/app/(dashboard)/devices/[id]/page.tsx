@@ -117,8 +117,9 @@ function StateBadge({ state }: { state: string | null }) {
 }
 
 const SOURCE_LABELS: Record<string, string> = {
-  custody: "Custody",
+  custody: "Custody Audit",
   inventory: "Inventory",
+  netbox: "Netbox Custody",
 };
 
 const EVENT_ICONS: Record<string, string> = {
@@ -182,6 +183,12 @@ function HistoryTimeline({ events }: { events: DeviceHistoryEvent[] }) {
             )}
             {ev.CSP_ID && (
               <p className="mt-1 text-xs text-slate-500">CSP: {ev.CSP_ID}</p>
+            )}
+            {ev.CONNECTION_ID && (
+              <p className="mt-1 font-mono text-[10px] text-slate-600">Conn: {ev.CONNECTION_ID}</p>
+            )}
+            {ev.IDLE_DAYS != null && ev.IDLE_DAYS > 0 && (
+              <p className="mt-1 text-xs text-slate-500">Idle: {ev.IDLE_DAYS} days</p>
             )}
           </div>
         </div>

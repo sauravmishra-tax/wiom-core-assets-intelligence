@@ -150,10 +150,60 @@ def get_device_history(
     WHERE DEVICE_ID = '{safe_id}'
     ORDER BY MODIFIED_TIME ASC
     """
+    # Netbox custody snapshot changes — parse JSON, show only rows where
+    # status OR carry_fee_state OR connection_deactivated changes.
+    netbox_sql = f"""
+    SELECT
+        CREATED_AT AS event_at,
+        'netbox' AS source,
+        OPERATION AS event_type,
+        PARSE_JSON(AUDIT_DATA):status::STRING AS to_state,
+        PARSE_JSON(AUDIT_DATA):carry_fee_state::STRING AS carry_fee_state,
+        PARSE_JSON(AUDIT_DATA):connection_deactivated::STRING AS connection_deactivated,
+        PARSE_JSON(AUDIT_DATA):connection_id::STRING AS connection_id,
+        PARSE_JSON(AUDIT_DATA):customer_id::STRING AS customer_id,
+        PARSE_JSON(AUDIT_DATA):csp_id::STRING AS csp_id,
+        PARSE_JSON(AUDIT_DATA):idle_days::INTEGER AS idle_days,
+        PARSE_JSON(AUDIT_DATA):causation_id::STRING AS causation_id,
+        PARSE_JSON(AUDIT_DATA):version::INTEGER AS version
+    FROM CSP_ASSET_CUSTODY_SERVICE_CSP_ASSET_CUSTODY_SERVICE.AUDIT_LOG
+    WHERE RECORD_ID = '{safe_id}'
+    ORDER BY CREATED_AT ASC
+    """
+    netbox_raw = client.query(netbox_sql, use_cache=False)
+
+    # Keep only rows where something meaningful changed vs previous row
+    netbox_rows = []
+    prev: dict = {}
+    for row in netbox_raw:
+        changed = (
+            row.get("TO_STATE") != prev.get("TO_STATE")
+            or row.get("CARRY_FEE_STATE") != prev.get("CARRY_FEE_STATE")
+            or row.get("CONNECTION_DEACTIVATED") != prev.get("CONNECTION_DEACTIVATED")
+        )
+        if changed:
+            # Map to common shape
+            netbox_rows.append({
+                "EVENT_AT": row.get("EVENT_AT"),
+                "SOURCE": "netbox",
+                "EVENT_TYPE": row.get("EVENT_TYPE"),
+                "FROM_STATE": prev.get("TO_STATE"),
+                "TO_STATE": row.get("TO_STATE"),
+                "REASON": row.get("CAUSATION_ID"),
+                "TRIGGERED_BY": None,
+                "NOTE": f"Carry fee: {row['CARRY_FEE_STATE']}" if row.get("CARRY_FEE_STATE") else None,
+                "CSP_ID": row.get("CSP_ID"),
+                "CUSTOMER_ID": row.get("CUSTOMER_ID"),
+                "EPISODE_ID": None,
+                "IDLE_DAYS": row.get("IDLE_DAYS"),
+                "CONNECTION_ID": row.get("CONNECTION_ID"),
+            })
+        prev = row
+
     custody_rows = client.query(custody_sql, use_cache=False)
     inventory_rows = client.query(inventory_sql, use_cache=False)
     combined = sorted(
-        custody_rows + inventory_rows,
+        custody_rows + inventory_rows + netbox_rows,
         key=lambda r: r.get("EVENT_AT") or "",
     )
     return {"device_id": device_id, "events": combined}
