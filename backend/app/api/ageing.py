@@ -37,7 +37,10 @@ def _ordered_rows(
     holder_bucket: str | None = None,
     status: str | None = None,
 ) -> list[dict]:
-    rows = client.query(_matrix_sql(device_type, holder_bucket, status))
+    # Use query_rows_unbounded (CSV endpoint, 300s timeout) instead of query()
+    # (dataset endpoint, 60s timeout). The matrix UNION ALL is a heavy Snowflake
+    # query; 60s isn't always enough and produces a silent httpx timeout → 500.
+    rows = client.query_rows_unbounded(_matrix_sql(device_type, holder_bucket, status))
     bucket_order = {b: i for i, b in enumerate(AGING_BUCKET_ORDER)}
     rows.sort(key=lambda r: bucket_order.get(r["AGING_BUCKET"], len(bucket_order)))
     return rows
