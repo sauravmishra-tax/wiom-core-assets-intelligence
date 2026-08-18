@@ -130,6 +130,25 @@ export interface DeviceSearchResult {
 
 export type DeviceProfile = Record<string, string | number | null>;
 
+export interface DeviceHistoryEvent {
+  EVENT_AT: string | null;
+  SOURCE: "custody" | "inventory";
+  EVENT_TYPE: string | null;
+  FROM_STATE: string | null;
+  TO_STATE: string | null;
+  REASON: string | null;
+  TRIGGERED_BY: string | null;
+  NOTE: string | null;
+  CSP_ID: string | null;
+  CUSTOMER_ID: string | null;
+  EPISODE_ID: string | null;
+}
+
+export interface DeviceHistory {
+  device_id: string;
+  events: DeviceHistoryEvent[];
+}
+
 export interface AssetRegisterCoverage {
   data_starts: string;
   note: string;
@@ -369,6 +388,8 @@ export const api = {
     ),
   deviceProfile: (deviceId: string) =>
     request<DeviceProfile>(`/api/devices/${encodeURIComponent(deviceId)}`),
+  deviceHistory: (deviceId: string) =>
+    request<DeviceHistory>(`/api/devices/${encodeURIComponent(deviceId)}/history`),
   vintageMatrix: (queryString = "") => request<VintageMatrix>(`/api/vintage/writeoff-matrix${queryString}`),
   assetRegisterPurchaseWriteoff: () => request<PurchaseWriteoffResponse>("/api/asset-register/purchase-writeoff"),
   assetRegisterCumulative: () => request<CumulativeResponse>("/api/asset-register/cumulative"),

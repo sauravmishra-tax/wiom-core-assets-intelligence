@@ -108,6 +108,57 @@ def export_devices_csv(
     )
 
 
+@router.get("/{device_id}/history")
+def get_device_history(
+    device_id: str,
+    client: WarehouseClient = Depends(get_warehouse_client),
+) -> dict:
+    safe_id = escape_literal(device_id)
+    # Custody state changes (write-offs, reversals, etc.)
+    custody_sql = f"""
+    SELECT
+        CREATED_AT AS event_at,
+        'custody' AS source,
+        EVENT_TYPE AS event_type,
+        FROM_STATE AS from_state,
+        TO_STATE AS to_state,
+        REASON AS reason,
+        TRIGGERED_BY AS triggered_by,
+        PROVENANCE AS note,
+        CSP_ID AS csp_id,
+        CUSTOMER_ID AS customer_id,
+        EPISODE_ID AS episode_id
+    FROM CSP_ASSET_CUSTODY_SERVICE_CSP_ASSET_CUSTODY_SERVICE.CUSTODY_AUDIT_LOG
+    WHERE DEVICE_ID = '{safe_id}'
+    ORDER BY CREATED_AT ASC
+    """
+    # Inventory-level status changes
+    inventory_sql = f"""
+    SELECT
+        MODIFIED_TIME AS event_at,
+        'inventory' AS source,
+        ACTION AS event_type,
+        NULL AS from_state,
+        STATUS AS to_state,
+        NULL AS reason,
+        NULL AS triggered_by,
+        NULL AS note,
+        NULL AS csp_id,
+        NULL AS customer_id,
+        NULL AS episode_id
+    FROM POSTGRES_RDS_INVENTORY_INVENTORY.T_DEVICE_AUDIT
+    WHERE DEVICE_ID = '{safe_id}'
+    ORDER BY MODIFIED_TIME ASC
+    """
+    custody_rows = client.query(custody_sql, use_cache=False)
+    inventory_rows = client.query(inventory_sql, use_cache=False)
+    combined = sorted(
+        custody_rows + inventory_rows,
+        key=lambda r: r.get("EVENT_AT") or "",
+    )
+    return {"device_id": device_id, "events": combined}
+
+
 @router.get("/{device_id}")
 def get_device_profile(
     device_id: str,
