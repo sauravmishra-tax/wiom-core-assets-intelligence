@@ -234,6 +234,19 @@ function MethodologyTab({ onEditSql }: { onEditSql: () => void }) {
             table as of the last cache refresh, not the exact second you load the page &mdash; check
             the &quot;Synced&quot; time in the top bar if figures look stale, or hit Refresh Data.
           </li>
+          <li>
+            <strong className="text-slate-200">Won&apos;t match other churn/recovery dashboards
+            exactly</strong> &mdash; some reference dashboards in this space source their
+            churn/recovery-aging split from a separate model (rebuilt from raw
+            tickets/recharges/device-audit records) instead of this app&apos;s recharge-expiry join
+            (<code className="font-mono text-xs">T_ROUTER_USER_MAPPING</code>, OTP=&apos;DONE&apos; +
+            DEVICE_LIMIT=10). Verified against one such dashboard: Active-Customer and Wiom-Warehouse
+            counts land within ~2&ndash;7% of each other, but the &quot;Churned/stuck&quot; bucket can
+            differ by ~45% (their model captures more of the aged-customer population than this
+            app&apos;s recharge join does). Not a bug on either side &mdash; different source data for
+            the same concept. Don&apos;t reconcile the two by hand; treat each as internally consistent
+            on its own.
+          </li>
           {dq && dq.blank_device_id_rows_excluded > 0 && (
             <li>
               <strong className="text-slate-200">{dq.blank_device_id_rows_excluded.toLocaleString("en-IN")} rows</strong>{" "}
