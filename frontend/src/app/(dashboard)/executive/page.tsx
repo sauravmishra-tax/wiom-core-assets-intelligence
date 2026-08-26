@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import {
   Bar,
   BarChart,
@@ -15,11 +14,12 @@ import {
   YAxis,
 } from "recharts";
 import { api, ExecutiveKpis } from "@/lib/api";
-import { KpiCard, kpiGridVariants } from "@/components/KpiCard";
+import { KpiCard } from "@/components/KpiCard";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { ExportButton } from "@/components/ExportButton";
 import { SkeletonCard } from "@/components/KpiCard";
 import { useGlobalFilters } from "@/components/GlobalFilters";
+import { n, pct, Num, StatCard, HighlightTag, KeyHighlights } from "@/components/Highlights";
 
 const HOLDER_COLORS = ["#34d399", "#38bdf8", "#f59e0b", "#a78bfa", "#64748b"];
 const STATUS_COLORS: Record<string, string> = {
@@ -191,16 +191,25 @@ export default function ExecutivePage() {
     { name: "Other", key: "OTHER", value: data.OTHER_STATUS },
   ];
 
+  const writtenOffOrLost = data.WRITTEN_OFF + data.LOST;
+  const unresolvedOther =
+    data.CUSTOMER_RECOVERY_PENDING + data.RETRIEVAL_PENDING + data.PENDING_CSP_RECEIPT + data.RTO_INITIATED;
+
   return (
     <div className="space-y-8 p-8">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Executive Dashboard</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Live from PROD_DB.DBT_INVENTORY_REQUEST.INVENTORY_MODEL &middot; deduplicated
+        <div className="rounded-2xl border border-white/8 bg-gradient-to-br from-[#ff6fd8]/10 to-transparent p-5">
+          <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#ff6fd8]">
+            Executive Dashboard
+          </div>
+          <h1 className="brand-gradient-text text-2xl font-bold">Where The Entire Fleet Stands</h1>
+          <p className="mt-1.5 max-w-2xl text-sm text-slate-400">
+            Live from PROD_DB.DBT_INVENTORY_REQUEST.INVENTORY_MODEL, deduplicated. Every number below
+            is one of five complete, non-overlapping splits of the same {n(data.TOTAL_DEVICES)}-device
+            total &mdash; see the equations further down for the full arithmetic.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <ExportButton href={`/api/executive/kpis.csv${queryString}`} label="Export totals" />
           <ExportButton href={`/api/devices/export/full.csv${queryString}`} label="Export device-level (full)" />
         </div>
@@ -215,18 +224,83 @@ export default function ExecutivePage() {
         </div>
       )}
 
-      <motion.div variants={kpiGridVariants} initial="hidden" animate="show">
-        <KpiCard label="Total Devices" value={data.TOTAL_DEVICES} />
-      </motion.div>
-
-      <div className="rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-slate-400">
-        Below are <strong className="text-slate-200">5 different ways to slice the same total</strong> —
-        each row is a complete, non-overlapping split of all {data.TOTAL_DEVICES.toLocaleString("en-IN")}{" "}
-        devices by one dimension (where they came from, whether dispatched, where they sit now,
-        their status, their recharge state). Add up any one row and it equals Total Devices exactly
-        &mdash; that&apos;s what the ✓ check is verifying live. Don&apos;t add numbers <em>across</em>{" "}
-        different rows; each row is its own complete picture, not a subset of another.
+      {/* Headline numbers -- label / big value / % context / comparison, never a bare number */}
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
+        <StatCard label="Total Devices" value={n(data.TOTAL_DEVICES)} sub="tracked end-to-end" />
+        <StatCard
+          label="Deployed"
+          value={n(data.DEPLOYED)}
+          tone="success"
+          sub={`${pct(data.DEPLOYED, data.TOTAL_DEVICES)} of fleet`}
+          foot="live with a customer today"
+        />
+        <StatCard
+          label="Recharge Active"
+          value={n(data.RECHARGE_ACTIVE)}
+          tone="success"
+          sub={`${pct(data.RECHARGE_ACTIVE, data.TOTAL_DEVICES)} of fleet`}
+          foot="generating revenue"
+        />
+        <StatCard
+          label="365+ Days Aged"
+          value={n(data.AGED_365_PLUS)}
+          tone="danger"
+          sub={`${pct(data.AGED_365_PLUS, data.TOTAL_DEVICES)} of fleet`}
+          foot="write-off candidate pool"
+        />
+        <StatCard
+          label="Lost + Written Off"
+          value={n(writtenOffOrLost)}
+          tone="danger"
+          sub={`${pct(writtenOffOrLost, data.TOTAL_DEVICES)} of fleet`}
+          foot={`${n(data.LOST)} lost, ${n(data.WRITTEN_OFF)} written off`}
+        />
       </div>
+
+      <KeyHighlights
+        items={[
+          <>
+            <Num>{n(data.TOTAL_DEVICES)}</Num> devices are tracked end-to-end, of which{" "}
+            <Num tone="success">{n(data.DISPATCHED)}</Num> ({pct(data.DISPATCHED, data.TOTAL_DEVICES)})
+            have been dispatched into the field at some point.
+          </>,
+          <>
+            <Num tone="success">{n(data.CUSTOMER_DEVICES)}</Num> devices (
+            {pct(data.CUSTOMER_DEVICES, data.TOTAL_DEVICES)}) sit at a customer right now, while{" "}
+            <Num>{n(data.PARTNER_DEVICES)}</Num> are with a partner and{" "}
+            <Num>{n(data.RETURNED_DEVICES)}</Num> have made it back to a Wiom warehouse.
+          </>,
+          <>
+            <Num tone="success">{n(data.RECHARGE_ACTIVE)}</Num> devices (
+            {pct(data.RECHARGE_ACTIVE, data.TOTAL_DEVICES)}) have an active recharge today{" "}
+            <HighlightTag good />.
+          </>,
+          <>
+            <Num tone="danger">{n(data.AGED_365_PLUS)}</Num> devices (
+            {pct(data.AGED_365_PLUS, data.TOTAL_DEVICES)}) have been past recharge expiry for over a{" "}
+            <strong>full year</strong> &mdash; the pool least likely to ever be physically recovered{" "}
+            <HighlightTag good={false} />.
+          </>,
+          <>
+            <Num tone="danger">{n(writtenOffOrLost)}</Num> devices (
+            {pct(writtenOffOrLost, data.TOTAL_DEVICES)}) are already lost or financially written off
+            &mdash; <Num>{n(data.LOST)}</Num> lost, <Num>{n(data.WRITTEN_OFF)}</Num> written off.
+          </>,
+          <>
+            <Num tone="warning">{n(unresolvedOther)}</Num> devices are actively mid-recovery (pending
+            customer pickup, partner retrieval, CSP receipt, or RTO) &mdash; not stuck, but worth
+            watching so they don&apos;t silently age into the 365+ bucket above.
+          </>,
+          data.UNKNOWN_HOLDER > 0 && (
+            <>
+              <Num tone="warning">{n(data.UNKNOWN_HOLDER)}</Num> devices (
+              {pct(data.UNKNOWN_HOLDER, data.TOTAL_DEVICES)}) have no resolvable current holder &mdash;
+              excluded from every &ldquo;current custody&rdquo; percentage above; see the breakdown in
+              row 3 of the equations below.
+            </>
+          ),
+        ].filter(Boolean)}
+      />
 
       <div className="space-y-4">
         <EquationGroup
