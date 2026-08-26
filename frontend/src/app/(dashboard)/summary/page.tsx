@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { api, AgeingMatrix, ExecutiveKpis, InventoryBreakdown, PartnerSummaryResponse } from "@/lib/api";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { useGlobalFilters } from "@/components/GlobalFilters";
-import { n, pct, Num, StatCard, HighlightTag, KeyHighlights } from "@/components/Highlights";
+import { n, pct, Num, StatCard, HighlightTag, KeyHighlights, DeviceCostBanner, useDeviceCost, fmtCr } from "@/components/Highlights";
 
 function Section({
   title,
@@ -33,6 +33,7 @@ export default function SummaryPage() {
   const [partners, setPartners] = useState<PartnerSummaryResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { queryString } = useGlobalFilters();
+  const [deviceCost, setDeviceCost] = useDeviceCost();
 
   useEffect(() => {
     setKpis(null);
@@ -84,6 +85,8 @@ export default function SummaryPage() {
         </p>
       </div>
 
+      <DeviceCostBanner cost={deviceCost} onChange={setDeviceCost} />
+
       {/* Headline numbers -- label / big value / % context / comparison, never a bare number */}
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard
@@ -100,17 +103,17 @@ export default function SummaryPage() {
           foot="generating revenue today"
         />
         <StatCard
-          label="Aged 365+ Days"
-          value={n(aged365)}
+          label="Stuck Capital (365+)"
+          value={fmtCr(aged365, deviceCost)}
           tone="danger"
-          sub={`${pct(aged365, kpis.TOTAL_DEVICES)} of fleet`}
+          sub={`${n(aged365)} devices, ${pct(aged365, kpis.TOTAL_DEVICES)} of fleet`}
           foot="candidate pool for write-off"
         />
         <StatCard
           label="Lost + Written Off"
-          value={n(kpis.LOST + kpis.WRITTEN_OFF)}
+          value={fmtCr(kpis.LOST + kpis.WRITTEN_OFF, deviceCost)}
           tone="danger"
-          sub={`${pct(kpis.LOST + kpis.WRITTEN_OFF, kpis.TOTAL_DEVICES)} of fleet`}
+          sub={`${n(kpis.LOST + kpis.WRITTEN_OFF)} devices, ${pct(kpis.LOST + kpis.WRITTEN_OFF, kpis.TOTAL_DEVICES)} of fleet`}
           foot={`${n(kpis.LOST)} lost, ${n(kpis.WRITTEN_OFF)} written off`}
         />
         <StatCard
@@ -131,14 +134,16 @@ export default function SummaryPage() {
           </>,
           <>
             <Num tone="danger">{n(aged365)}</Num> devices ({pct(aged365, kpis.TOTAL_DEVICES)}) have been
-            past recharge expiry for over a <strong>full year</strong> &mdash; the pool least likely to ever
-            be physically recovered <HighlightTag good={false} />.
+            past recharge expiry for over a <strong>full year</strong>, worth{" "}
+            <Num tone="danger">{fmtCr(aged365, deviceCost)}</Num> at the device cost above &mdash; the
+            pool least likely to ever be physically recovered <HighlightTag good={false} />.
           </>,
           <>
             <Num tone="danger">{n(kpis.LOST + kpis.WRITTEN_OFF)}</Num> devices (
-            {pct(kpis.LOST + kpis.WRITTEN_OFF, kpis.TOTAL_DEVICES)}) are already lost or financially
-            written off &mdash; treat as effectively gone unless a specific reactivation effort targets
-            them.
+            {pct(kpis.LOST + kpis.WRITTEN_OFF, kpis.TOTAL_DEVICES)}, worth{" "}
+            <Num tone="danger">{fmtCr(kpis.LOST + kpis.WRITTEN_OFF, deviceCost)}</Num>) are already lost
+            or financially written off &mdash; treat as effectively gone unless a specific reactivation
+            effort targets them.
           </>,
           <>
             <Num tone="warning">{n(inTransitBackToWiom)}</Num> devices are actively mid-recovery (pending
@@ -154,7 +159,9 @@ export default function SummaryPage() {
           <>
             Bottom line: roughly{" "}
             <Num tone="danger">{pct(aged365 + kpis.LOST + kpis.WRITTEN_OFF, kpis.TOTAL_DEVICES)}</Num> of
-            the fleet is aged past a year, lost, or written off, while{" "}
+            the fleet (
+            <Num tone="danger">{fmtCr(aged365 + kpis.LOST + kpis.WRITTEN_OFF, deviceCost)}</Num>) is aged
+            past a year, lost, or written off, while{" "}
             <Num tone="success">{pct(kpis.RECHARGE_ACTIVE, kpis.TOTAL_DEVICES)}</Num> is active and
             generating revenue today.
           </>,

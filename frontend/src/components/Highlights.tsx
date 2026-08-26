@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 /** Shared "Router Recovery Command Center" style presentation primitives --
  * used on Summary and Executive so every number lands with context (a %,
  * a comparison) instead of sitting bare, and headline takeaways read as a
@@ -12,6 +14,80 @@ export function pct(part: number, whole: number): string {
 
 export function n(value: number): string {
   return value.toLocaleString("en-IN");
+}
+
+const DEVICE_COST_KEY = "waip_device_cost_rs";
+const DEFAULT_DEVICE_COST = 1500;
+
+/** Device cost in Rs, editable and persisted per-browser (localStorage) -
+ * same "editable placeholder, pending finance sign-off" pattern as the
+ * Router Recovery Command Center's cost banner. Every Rs. Cr figure on
+ * Summary/Executive is derived from this single number. */
+export function useDeviceCost(): [number, (v: number) => void] {
+  const [cost, setCostState] = useState(DEFAULT_DEVICE_COST);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(DEVICE_COST_KEY);
+      if (stored) {
+        const parsed = Number(stored);
+        if (Number.isFinite(parsed) && parsed > 0) setCostState(parsed);
+      }
+    } catch {
+      // localStorage unavailable - fall back to default silently
+    }
+  }, []);
+
+  const setCost = (v: number) => {
+    setCostState(v);
+    try {
+      localStorage.setItem(DEVICE_COST_KEY, String(v));
+    } catch {
+      // ignore
+    }
+  };
+
+  return [cost, setCost];
+}
+
+/** devices * cost/device, in Rs. Crore, formatted as "Rs.X.XX Cr" */
+export function fmtCr(devices: number, costPerDevice: number): string {
+  const cr = (devices * costPerDevice) / 1e7;
+  return `Rs.${cr.toFixed(2)} Cr`;
+}
+
+/** Sticky banner with an editable device-cost input, driving every Rs. Cr
+ * figure on the page. Placeholder pending finance sign-off - same framing
+ * as the reference dashboard, so nobody mistakes it for an audited number. */
+export function DeviceCostBanner({
+  cost,
+  onChange,
+}: {
+  cost: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-rose-500/25 bg-rose-500/[0.06] px-4 py-2.5 text-xs text-slate-300">
+      <span className="text-rose-300">⚠</span>
+      <span>Device cost used in every Rs. figure below &mdash;</span>
+      <span className="inline-flex items-center gap-1 font-semibold text-rose-300">
+        Rs.
+        <input
+          type="number"
+          min={1}
+          step={50}
+          value={cost}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            if (Number.isFinite(v) && v > 0) onChange(v);
+          }}
+          className="w-20 rounded border border-rose-500/40 bg-black/20 px-1.5 py-0.5 text-rose-200 tabular-nums outline-none focus:border-rose-400"
+        />
+        /device
+      </span>
+      <span className="text-slate-500">(editable placeholder, pending finance sign-off)</span>
+    </div>
+  );
 }
 
 const NUM_TONE_CLASSES: Record<string, string> = {

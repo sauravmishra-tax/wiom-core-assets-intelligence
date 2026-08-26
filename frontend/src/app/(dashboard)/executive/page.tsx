@@ -19,7 +19,7 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { ExportButton } from "@/components/ExportButton";
 import { SkeletonCard } from "@/components/KpiCard";
 import { useGlobalFilters } from "@/components/GlobalFilters";
-import { n, pct, Num, StatCard, HighlightTag, KeyHighlights } from "@/components/Highlights";
+import { n, pct, Num, StatCard, HighlightTag, KeyHighlights, DeviceCostBanner, useDeviceCost, fmtCr } from "@/components/Highlights";
 
 const HOLDER_COLORS = ["#34d399", "#38bdf8", "#f59e0b", "#a78bfa", "#64748b"];
 const STATUS_COLORS: Record<string, string> = {
@@ -155,6 +155,7 @@ export default function ExecutivePage() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { queryString } = useGlobalFilters();
+  const [deviceCost, setDeviceCost] = useDeviceCost();
 
   useEffect(() => {
     setData(null);
@@ -224,6 +225,8 @@ export default function ExecutivePage() {
         </div>
       )}
 
+      <DeviceCostBanner cost={deviceCost} onChange={setDeviceCost} />
+
       {/* Headline numbers -- label / big value / % context / comparison, never a bare number */}
       <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard label="Total Devices" value={n(data.TOTAL_DEVICES)} sub="tracked end-to-end" />
@@ -242,17 +245,17 @@ export default function ExecutivePage() {
           foot="generating revenue"
         />
         <StatCard
-          label="365+ Days Aged"
-          value={n(data.AGED_365_PLUS)}
+          label="Stuck Capital (365+)"
+          value={fmtCr(data.AGED_365_PLUS, deviceCost)}
           tone="danger"
-          sub={`${pct(data.AGED_365_PLUS, data.TOTAL_DEVICES)} of fleet`}
+          sub={`${n(data.AGED_365_PLUS)} devices, ${pct(data.AGED_365_PLUS, data.TOTAL_DEVICES)} of fleet`}
           foot="write-off candidate pool"
         />
         <StatCard
           label="Lost + Written Off"
-          value={n(writtenOffOrLost)}
+          value={fmtCr(writtenOffOrLost, deviceCost)}
           tone="danger"
-          sub={`${pct(writtenOffOrLost, data.TOTAL_DEVICES)} of fleet`}
+          sub={`${n(writtenOffOrLost)} devices, ${pct(writtenOffOrLost, data.TOTAL_DEVICES)} of fleet`}
           foot={`${n(data.LOST)} lost, ${n(data.WRITTEN_OFF)} written off`}
         />
       </div>
@@ -278,13 +281,16 @@ export default function ExecutivePage() {
           <>
             <Num tone="danger">{n(data.AGED_365_PLUS)}</Num> devices (
             {pct(data.AGED_365_PLUS, data.TOTAL_DEVICES)}) have been past recharge expiry for over a{" "}
-            <strong>full year</strong> &mdash; the pool least likely to ever be physically recovered{" "}
+            <strong>full year</strong>, worth <Num tone="danger">{fmtCr(data.AGED_365_PLUS, deviceCost)}</Num>{" "}
+            at the device cost above &mdash; the pool least likely to ever be physically recovered{" "}
             <HighlightTag good={false} />.
           </>,
           <>
             <Num tone="danger">{n(writtenOffOrLost)}</Num> devices (
-            {pct(writtenOffOrLost, data.TOTAL_DEVICES)}) are already lost or financially written off
-            &mdash; <Num>{n(data.LOST)}</Num> lost, <Num>{n(data.WRITTEN_OFF)}</Num> written off.
+            {pct(writtenOffOrLost, data.TOTAL_DEVICES)}, worth{" "}
+            <Num tone="danger">{fmtCr(writtenOffOrLost, deviceCost)}</Num>) are already lost or
+            financially written off &mdash; <Num>{n(data.LOST)}</Num> lost, <Num>{n(data.WRITTEN_OFF)}</Num>{" "}
+            written off.
           </>,
           <>
             <Num tone="warning">{n(unresolvedOther)}</Num> devices are actively mid-recovery (pending
