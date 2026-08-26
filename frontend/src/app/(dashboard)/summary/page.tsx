@@ -72,6 +72,16 @@ export default function SummaryPage() {
   const cspCount = partners.leaderboard.rows.filter((r) => r.CSP_STATUS === "CSP").length;
   const exCspCount = partners.leaderboard.total_partners - cspCount;
 
+  // 180-364 days = "at risk but not yet write-off territory" - the mid-band
+  // between the 180+ and 365+ thresholds, not called out anywhere else on
+  // this page today.
+  const aged180to364 = aged180 - aged365;
+  const custodyIdlePool = custodied + kpis.IDLE;
+  const topPartner = partners.leaderboard.rows.reduce(
+    (max, r) => (r.TOTAL_DEVICES > (max?.TOTAL_DEVICES ?? 0) ? r : max),
+    partners.leaderboard.rows[0]
+  );
+
   return (
     <div className="space-y-6 p-8">
       <div className="rounded-2xl border border-white/8 bg-gradient-to-br from-[#ff6fd8]/10 to-transparent p-5">
@@ -153,6 +163,33 @@ export default function SummaryPage() {
             into the 365+ bucket above.
           </>,
           <>
+            Another <Num tone="warning">{n(aged180to364)}</Num> devices ({pct(aged180to364, kpis.TOTAL_DEVICES)}
+            ) sit in the 180&ndash;364 day band &mdash; already at-risk, not yet in write-off territory.
+            That&apos;s the pool to chase before it becomes next quarter&apos;s 365+ number.
+          </>,
+          <>
+            <Num tone="danger">{n(kpis.RECHARGE_EXPIRED)}</Num> devices ({pct(kpis.RECHARGE_EXPIRED, kpis.TOTAL_DEVICES)}
+            ) have a lapsed recharge &mdash; nearly{" "}
+            <Num tone="danger">
+              {(kpis.RECHARGE_EXPIRED / Math.max(kpis.RECHARGE_ACTIVE, 1)).toFixed(1)}&times;
+            </Num>{" "}
+            the active base, and growing every day a device sits unrecovered.
+          </>,
+          <>
+            <Num tone="warning">{n(custodyIdlePool)}</Num> devices ({pct(custodyIdlePool, kpis.TOTAL_DEVICES)}
+            ) are recovered but not yet back in the field &mdash; <Num>{n(custodied)}</Num> in custody,{" "}
+            <Num>{n(kpis.IDLE)}</Num> idle. Redeployable capital sitting on the shelf.
+          </>,
+          topPartner && (
+            <>
+              The single largest partner (<span className="font-mono text-slate-200">
+                {topPartner.PARTNER_NAME ?? topPartner.PARTNER_ACCOUNT_ID}
+              </span>) holds <Num tone="warning">{n(topPartner.TOTAL_DEVICES)}</Num> devices (
+              {pct(topPartner.TOTAL_DEVICES, kpis.TOTAL_DEVICES)} of the whole fleet) &mdash; a
+              concentration worth knowing about before any partner-side policy change.
+            </>
+          ),
+          <>
             Of <Num>{n(partners.leaderboard.total_partners)}</Num> partners ever attributed devices,{" "}
             <Num tone="success">{n(cspCount)}</Num> are live CSPs today and{" "}
             <Num tone="warning">{n(exCspCount)}</Num> are ex-CSP &mdash; churned or never onboarded, but
@@ -167,7 +204,7 @@ export default function SummaryPage() {
             <Num tone="success">{pct(kpis.RECHARGE_ACTIVE, kpis.TOTAL_DEVICES)}</Num> is active and
             generating revenue today.
           </>,
-        ]}
+        ].filter(Boolean)}
       />
 
       <div className="grid gap-5 lg:grid-cols-2">
