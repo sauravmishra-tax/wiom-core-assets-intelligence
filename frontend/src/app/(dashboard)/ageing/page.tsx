@@ -140,6 +140,7 @@ export default function AgeingPage() {
           <div className="glass-card overflow-x-auto rounded-xl p-5">
             <h2 className="mb-3 text-sm font-semibold text-slate-300">
               Netbox by Location &times; Device Type
+              <span className="ml-2 text-xs font-normal text-slate-500">(ex-written-off/lost)</span>
             </h2>
             <table className="w-full text-sm">
               <thead>

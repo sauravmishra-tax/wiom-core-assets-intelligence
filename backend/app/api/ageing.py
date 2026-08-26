@@ -91,11 +91,18 @@ _HOLDER_LABELS = {
 def _holder_device_matrix_sql(status: str | None = None) -> str:
     fc = _build_filter_clause(None, None, status)
     where = where_or_and(fc, existing_where=False)
+    # Written-off + Lost are excluded here on purpose: this table is meant to
+    # answer "where does every LIVE device physically sit right now" (mirrors
+    # the reference dashboard's "Netbox, ex-written-off" framing). Without
+    # this filter, the customer row silently absorbs ~76k written-off/lost
+    # devices that have nothing to do with current physical location.
+    exclude_wo_lost = "STATUS_NORMALIZED NOT IN ('WRITTEN_OFF', 'LOST')"
     return f"""
 WITH {enriched_cte()},
 filtered AS (SELECT * FROM enriched{where})
 SELECT HOLDER_BUCKET, DEVICE_TYPE_NORMALIZED, COUNT(*) AS device_count
 FROM filtered
+WHERE {exclude_wo_lost}
 GROUP BY 1, 2
 """
 
@@ -106,8 +113,8 @@ def get_holder_device_matrix(
     client: WarehouseClient = Depends(get_warehouse_client),
 ) -> dict:
     """Current holder (customer/partner/returned/warehouse) x device type
-    cross-tab - independent of ageing bucket, answers "where does every
-    device physically sit right now, split ONT vs Router."""
+    cross-tab, excluding Written-off + Lost devices - answers "where does
+    every LIVE device physically sit right now," split ONT vs Router."""
     rows = client.query(_holder_device_matrix_sql(status))
     order = {h: i for i, h in enumerate(_HOLDER_ORDER)}
     rows.sort(key=lambda r: order.get(r["HOLDER_BUCKET"], len(order)))
