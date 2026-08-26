@@ -19,7 +19,7 @@ import { ErrorBanner } from "@/components/ErrorBanner";
 import { ExportButton } from "@/components/ExportButton";
 import { SkeletonCard } from "@/components/KpiCard";
 import { useGlobalFilters } from "@/components/GlobalFilters";
-import { n, pct, Num, StatCard, HighlightTag, KeyHighlights, DeviceCostBanner, useDeviceCost, fmtCr } from "@/components/Highlights";
+import { n } from "@/components/Highlights";
 
 const HOLDER_COLORS = ["#34d399", "#38bdf8", "#f59e0b", "#a78bfa", "#64748b"];
 const STATUS_COLORS: Record<string, string> = {
@@ -155,7 +155,6 @@ export default function ExecutivePage() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { queryString } = useGlobalFilters();
-  const [deviceCost, setDeviceCost] = useDeviceCost();
 
   useEffect(() => {
     setData(null);
@@ -192,10 +191,6 @@ export default function ExecutivePage() {
     { name: "Other", key: "OTHER", value: data.OTHER_STATUS },
   ];
 
-  const writtenOffOrLost = data.WRITTEN_OFF + data.LOST;
-  const unresolvedOther =
-    data.CUSTOMER_RECOVERY_PENDING + data.RETRIEVAL_PENDING + data.PENDING_CSP_RECEIPT + data.RTO_INITIATED;
-
   return (
     <div className="space-y-8 p-8">
       <div className="flex items-start justify-between gap-4">
@@ -203,11 +198,12 @@ export default function ExecutivePage() {
           <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#ff6fd8]">
             Executive Dashboard
           </div>
-          <h1 className="brand-gradient-text text-2xl font-bold">Where The Entire Fleet Stands</h1>
+          <h1 className="brand-gradient-text text-2xl font-bold">The Arithmetic Behind The Fleet</h1>
           <p className="mt-1.5 max-w-2xl text-sm text-slate-400">
-            Live from PROD_DB.DBT_INVENTORY_REQUEST.INVENTORY_MODEL, deduplicated. Every number below
-            is one of five complete, non-overlapping splits of the same {n(data.TOTAL_DEVICES)}-device
-            total &mdash; see the equations further down for the full arithmetic.
+            For the headline story and Rs. Cr impact, see <span className="text-slate-200">Summary</span>.
+            This page is the proof: five different, non-overlapping ways to slice the same{" "}
+            {n(data.TOTAL_DEVICES)}-device total, each ending in a live ✓/✗ check that the parts
+            actually add up &mdash; plus the two charts below for a visual cut.
           </p>
         </div>
         <div className="flex shrink-0 gap-2">
@@ -225,88 +221,11 @@ export default function ExecutivePage() {
         </div>
       )}
 
-      <DeviceCostBanner cost={deviceCost} onChange={setDeviceCost} />
-
-      {/* Headline numbers -- label / big value / % context / comparison, never a bare number */}
-      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Devices" value={n(data.TOTAL_DEVICES)} sub="tracked end-to-end" />
-        <StatCard
-          label="Deployed"
-          value={n(data.DEPLOYED)}
-          tone="success"
-          sub={`${pct(data.DEPLOYED, data.TOTAL_DEVICES)} of fleet`}
-          foot="live with a customer today"
-        />
-        <StatCard
-          label="Recharge Active"
-          value={n(data.RECHARGE_ACTIVE)}
-          tone="success"
-          sub={`${pct(data.RECHARGE_ACTIVE, data.TOTAL_DEVICES)} of fleet`}
-          foot="generating revenue"
-        />
-        <StatCard
-          label="Stuck Capital (365+)"
-          value={fmtCr(data.AGED_365_PLUS, deviceCost)}
-          tone="danger"
-          sub={`${n(data.AGED_365_PLUS)} devices, ${pct(data.AGED_365_PLUS, data.TOTAL_DEVICES)} of fleet`}
-          foot="write-off candidate pool"
-        />
-        <StatCard
-          label="Lost + Written Off"
-          value={fmtCr(writtenOffOrLost, deviceCost)}
-          tone="danger"
-          sub={`${n(writtenOffOrLost)} devices, ${pct(writtenOffOrLost, data.TOTAL_DEVICES)} of fleet`}
-          foot={`${n(data.LOST)} lost, ${n(data.WRITTEN_OFF)} written off`}
-        />
+      <div className="rounded-lg border border-white/10 bg-white/[0.02] px-4 py-3 text-sm text-slate-400">
+        Don&apos;t add numbers <em>across</em> different rows below &mdash; each row (1&ndash;5) is its
+        own complete, non-overlapping split of all {n(data.TOTAL_DEVICES)} devices. Add up any one row
+        and it equals Total Devices exactly; that&apos;s what the ✓ check verifies live.
       </div>
-
-      <KeyHighlights
-        items={[
-          <>
-            <Num>{n(data.TOTAL_DEVICES)}</Num> devices are tracked end-to-end, of which{" "}
-            <Num tone="success">{n(data.DISPATCHED)}</Num> ({pct(data.DISPATCHED, data.TOTAL_DEVICES)})
-            have been dispatched into the field at some point.
-          </>,
-          <>
-            <Num tone="success">{n(data.CUSTOMER_DEVICES)}</Num> devices (
-            {pct(data.CUSTOMER_DEVICES, data.TOTAL_DEVICES)}) sit at a customer right now, while{" "}
-            <Num>{n(data.PARTNER_DEVICES)}</Num> are with a partner and{" "}
-            <Num>{n(data.RETURNED_DEVICES)}</Num> have made it back to a Wiom warehouse.
-          </>,
-          <>
-            <Num tone="success">{n(data.RECHARGE_ACTIVE)}</Num> devices (
-            {pct(data.RECHARGE_ACTIVE, data.TOTAL_DEVICES)}) have an active recharge today{" "}
-            <HighlightTag good />.
-          </>,
-          <>
-            <Num tone="danger">{n(data.AGED_365_PLUS)}</Num> devices (
-            {pct(data.AGED_365_PLUS, data.TOTAL_DEVICES)}) have been past recharge expiry for over a{" "}
-            <strong>full year</strong>, worth <Num tone="danger">{fmtCr(data.AGED_365_PLUS, deviceCost)}</Num>{" "}
-            at the device cost above &mdash; the pool least likely to ever be physically recovered{" "}
-            <HighlightTag good={false} />.
-          </>,
-          <>
-            <Num tone="danger">{n(writtenOffOrLost)}</Num> devices (
-            {pct(writtenOffOrLost, data.TOTAL_DEVICES)}, worth{" "}
-            <Num tone="danger">{fmtCr(writtenOffOrLost, deviceCost)}</Num>) are already lost or
-            financially written off &mdash; <Num>{n(data.LOST)}</Num> lost, <Num>{n(data.WRITTEN_OFF)}</Num>{" "}
-            written off.
-          </>,
-          <>
-            <Num tone="warning">{n(unresolvedOther)}</Num> devices are actively mid-recovery (pending
-            customer pickup, partner retrieval, CSP receipt, or RTO) &mdash; not stuck, but worth
-            watching so they don&apos;t silently age into the 365+ bucket above.
-          </>,
-          data.UNKNOWN_HOLDER > 0 && (
-            <>
-              <Num tone="warning">{n(data.UNKNOWN_HOLDER)}</Num> devices (
-              {pct(data.UNKNOWN_HOLDER, data.TOTAL_DEVICES)}) have no resolvable current holder &mdash;
-              excluded from every &ldquo;current custody&rdquo; percentage above; see the breakdown in
-              row 3 of the equations below.
-            </>
-          ),
-        ].filter(Boolean)}
-      />
 
       <div className="space-y-4">
         <EquationGroup

@@ -74,14 +74,16 @@ export default function SummaryPage() {
 
   return (
     <div className="space-y-6 p-8">
-      <div>
-        <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-          Router Recovery Command Center &middot; equivalent
+      <div className="rounded-2xl border border-white/8 bg-gradient-to-br from-[#ff6fd8]/10 to-transparent p-5">
+        <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#ff6fd8]">
+          Fleet Summary
         </div>
-        <h1 className="brand-gradient-text text-3xl font-bold">Fleet Summary</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <h1 className="brand-gradient-text text-2xl font-bold">Where The Fleet Stands, And What It Costs</h1>
+        <p className="mt-1.5 max-w-2xl text-sm text-slate-400">
           As of {new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" })}
-          {" "}&middot; live from PROD_DB.DBT_INVENTORY_REQUEST.INVENTORY_MODEL, deduplicated
+          {" "}&middot; live from PROD_DB.DBT_INVENTORY_REQUEST.INVENTORY_MODEL, deduplicated. For the
+          full arithmetic proof behind every total, see{" "}
+          <span className="text-slate-200">Executive</span>.
         </p>
       </div>
 
