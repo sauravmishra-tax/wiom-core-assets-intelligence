@@ -8,7 +8,7 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    router.replace(isSignedIn() ? "/executive" : "/login");
+    router.replace(isSignedIn() ? "/summary" : "/login");
   }, [router]);
 
   return <div className="min-h-screen bg-[#05040d]" />;

@@ -110,7 +110,7 @@ export default function LoginPage() {
         )}
       </AnimatePresence>
 
-      {launching && <LaunchSequence onComplete={() => router.push("/executive")} />}
+      {launching && <LaunchSequence onComplete={() => router.push("/summary")} />}
     </div>
   );
 }
