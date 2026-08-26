@@ -79,8 +79,12 @@ def export_ageing_matrix_csv(
 
 
 _HOLDER_ORDER = ["customer", "partner", "returned_to_wiom", "wiom_warehouse", "unknown"]
+# NOT called "Active Customer" - this row mixes active/expired/no-history
+# recharge status together (it's not filtered to recharge-active devices at
+# all, only to "not written-off/lost"). "Active" here would wrongly imply
+# it matches the AGEING_BUCKET = 'active' count elsewhere in the app.
 _HOLDER_LABELS = {
-    "customer": "Active Customer",
+    "customer": "With Customer",
     "partner": "With Partner",
     "returned_to_wiom": "Returned to Wiom",
     "wiom_warehouse": "Wiom Warehouse",

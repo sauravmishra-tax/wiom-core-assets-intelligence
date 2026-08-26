@@ -138,10 +138,16 @@ export default function AgeingPage() {
 
         return (
           <div className="glass-card overflow-x-auto rounded-xl p-5">
-            <h2 className="mb-3 text-sm font-semibold text-slate-300">
+            <h2 className="mb-1 text-sm font-semibold text-slate-300">
               Netbox by Location &times; Device Type
               <span className="ml-2 text-xs font-normal text-slate-500">(ex-written-off/lost)</span>
             </h2>
+            <p className="mb-3 text-xs text-slate-500">
+              &quot;With Customer&quot; here excludes written-off/lost devices and mixes every recharge
+              status (active/expired/no-history) together &mdash; this is why it&apos;s lower than the
+              &quot;installed with customers&quot; count on Summary/Executive, which counts every
+              customer-held device regardless of write-off status.
+            </p>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-white/10">
