@@ -44,6 +44,76 @@ function Section({
   );
 }
 
+const STAT_TONE_CLASSES: Record<string, string> = {
+  default: "text-white",
+  danger: "text-rose-400",
+  warning: "text-amber-300",
+  success: "text-emerald-300",
+};
+
+/** label -> big number -> sub (what it means) -> foot (comparison/context).
+ * Mirrors the Router Recovery Command Center's stat-card pattern: never a
+ * bare number, always paired with a % or a comparison right underneath it. */
+function StatCard({
+  label,
+  value,
+  tone = "default",
+  sub,
+  foot,
+}: {
+  label: string;
+  value: string;
+  tone?: "default" | "danger" | "warning" | "success";
+  sub?: string;
+  foot?: string;
+}) {
+  return (
+    <div className="glass-card rounded-xl border-l-[3px] border-l-[#ff6fd8]/40 p-4 pl-5 transition-colors hover:border-l-[#ff6fd8]">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">{label}</div>
+      <div className={`mt-1 font-display text-[28px] font-extrabold leading-none tabular-nums ${STAT_TONE_CLASSES[tone]}`}>
+        {value}
+      </div>
+      {sub && <div className="mt-1.5 text-xs text-slate-400">{sub}</div>}
+      {foot && <div className="mt-1 text-[11px] text-slate-600">{foot}</div>}
+    </div>
+  );
+}
+
+function HighlightTag({ good }: { good: boolean }) {
+  return (
+    <span
+      className={`ml-1.5 inline-block rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+        good ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"
+      }`}
+    >
+      {good ? "healthy" : "at risk"}
+    </span>
+  );
+}
+
+/** Numbered narrative list -- one crisp sentence per insight, bold numbers
+ * inline, a good/bad tag where it helps. This is the "point-wise, mudde ki
+ * baat" format instead of scattering every number across separate cards. */
+function KeyHighlights({ items }: { items: React.ReactNode[] }) {
+  return (
+    <div className="glass-card rounded-2xl p-6">
+      <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#ff6fd8]">
+        Key Highlights
+      </div>
+      <div className="flex flex-col gap-3.5">
+        {items.map((item, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ff6fd8] to-[#a855f7] text-[11px] font-bold text-white">
+              {i + 1}
+            </span>
+            <p className="pt-0.5 text-[13.5px] leading-relaxed text-slate-300">{item}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SummaryPage() {
   const [kpis, setKpis] = useState<ExecutiveKpis | null>(null);
   const [inventory, setInventory] = useState<InventoryBreakdown | null>(null);
@@ -101,6 +171,83 @@ export default function SummaryPage() {
           {" "}&middot; live from PROD_DB.DBT_INVENTORY_REQUEST.INVENTORY_MODEL, deduplicated
         </p>
       </div>
+
+      {/* Headline numbers -- label / big value / % context / comparison, never a bare number */}
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-5">
+        <StatCard
+          label="Total Fleet"
+          value={n(kpis.TOTAL_DEVICES)}
+          sub="devices end-to-end"
+          foot={`${n(kpis.DISPATCHED)} dispatched, ${n(kpis.FRESH_GRN)} still fresh GRN`}
+        />
+        <StatCard
+          label="Recharge Active"
+          value={n(kpis.RECHARGE_ACTIVE)}
+          tone="success"
+          sub={`${pct(kpis.RECHARGE_ACTIVE, kpis.TOTAL_DEVICES)} of fleet`}
+          foot="generating revenue today"
+        />
+        <StatCard
+          label="Aged 365+ Days"
+          value={n(aged365)}
+          tone="danger"
+          sub={`${pct(aged365, kpis.TOTAL_DEVICES)} of fleet`}
+          foot="candidate pool for write-off"
+        />
+        <StatCard
+          label="Lost + Written Off"
+          value={n(kpis.LOST + kpis.WRITTEN_OFF)}
+          tone="danger"
+          sub={`${pct(kpis.LOST + kpis.WRITTEN_OFF, kpis.TOTAL_DEVICES)} of fleet`}
+          foot={`${n(kpis.LOST)} lost, ${n(kpis.WRITTEN_OFF)} written off`}
+        />
+        <StatCard
+          label="Mid-Recovery"
+          value={n(inTransitBackToWiom)}
+          tone="warning"
+          sub={`${pct(inTransitBackToWiom, kpis.TOTAL_DEVICES)} of fleet`}
+          foot="on its way back to WIOM, not stuck"
+        />
+      </div>
+
+      <KeyHighlights
+        items={[
+          <>
+            <Num>{n(kpis.TOTAL_DEVICES)}</Num> devices are tracked end-to-end, of which{" "}
+            <Num tone="success">{n(kpis.RECHARGE_ACTIVE)}</Num> ({pct(kpis.RECHARGE_ACTIVE, kpis.TOTAL_DEVICES)})
+            have an active recharge right now <HighlightTag good />.
+          </>,
+          <>
+            <Num tone="danger">{n(aged365)}</Num> devices ({pct(aged365, kpis.TOTAL_DEVICES)}) have been
+            past recharge expiry for over a <strong>full year</strong> &mdash; the pool least likely to ever
+            be physically recovered <HighlightTag good={false} />.
+          </>,
+          <>
+            <Num tone="danger">{n(kpis.LOST + kpis.WRITTEN_OFF)}</Num> devices (
+            {pct(kpis.LOST + kpis.WRITTEN_OFF, kpis.TOTAL_DEVICES)}) are already lost or financially
+            written off &mdash; treat as effectively gone unless a specific reactivation effort targets
+            them.
+          </>,
+          <>
+            <Num tone="warning">{n(inTransitBackToWiom)}</Num> devices are actively mid-recovery (pending
+            pickup, retrieval, or RTO) &mdash; not stuck, but worth watching so they don&apos;t silently age
+            into the 365+ bucket above.
+          </>,
+          <>
+            Of <Num>{n(partners.leaderboard.total_partners)}</Num> partners ever attributed devices,{" "}
+            <Num tone="success">{n(cspCount)}</Num> are live CSPs today and{" "}
+            <Num tone="warning">{n(exCspCount)}</Num> are ex-CSP &mdash; churned or never onboarded, but
+            still carrying device history.
+          </>,
+          <>
+            Bottom line: roughly{" "}
+            <Num tone="danger">{pct(aged365 + kpis.LOST + kpis.WRITTEN_OFF, kpis.TOTAL_DEVICES)}</Num> of
+            the fleet is aged past a year, lost, or written off, while{" "}
+            <Num tone="success">{pct(kpis.RECHARGE_ACTIVE, kpis.TOTAL_DEVICES)}</Num> is active and
+            generating revenue today.
+          </>,
+        ]}
+      />
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Section eyebrow="Fleet size" title="Where the whole fleet stands today">
@@ -173,21 +320,6 @@ export default function SummaryPage() {
           gateway, but still carrying device history. See the Partners &amp; CSP tab for the
           per-partner breakdown.
         </Section>
-      </div>
-
-      <div className="glass-card rounded-2xl p-6">
-        <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-[#ff6fd8]">
-          Bottom line
-        </div>
-        <p className="text-sm leading-relaxed text-slate-300">
-          Out of <Num>{n(kpis.TOTAL_DEVICES)}</Num> total devices, roughly{" "}
-          <Num tone="danger">{pct(aged365 + kpis.LOST + kpis.WRITTEN_OFF, kpis.TOTAL_DEVICES)}</Num>{" "}
-          of the fleet is either aged past a year, lost, or written off &mdash; the segment finance
-          should treat as effectively unrecoverable unless a specific reactivation effort targets it.
-          The remaining{" "}
-          <Num tone="success">{pct(kpis.RECHARGE_ACTIVE, kpis.TOTAL_DEVICES)}</Num> active
-          base is healthy and generating recharge revenue today.
-        </p>
       </div>
 
       <div className="glass-card rounded-2xl border border-amber-500/20 bg-amber-500/[0.03] p-6">
