@@ -102,6 +102,16 @@ export interface AgeingMatrix {
   }>;
 }
 
+export interface HolderDeviceMatrix {
+  holder_order: string[];
+  holder_labels: Record<string, string>;
+  detail: Array<{
+    HOLDER_BUCKET: string;
+    DEVICE_TYPE_NORMALIZED: string;
+    DEVICE_COUNT: number;
+  }>;
+}
+
 export interface AgeingSegmentMatrix {
   segments: string[];
   statuses: string[];
@@ -382,6 +392,8 @@ export const api = {
       `/api/inventory/new-grn?limit=${limit}&offset=${offset}`
     ),
   ageingMatrix: (queryString = "") => request<AgeingMatrix>(`/api/ageing/matrix${queryString}`),
+  holderDeviceMatrix: (queryString = "") =>
+    request<HolderDeviceMatrix>(`/api/ageing/holder-device-matrix${queryString}`),
   ageingSegmentMatrix: (queryString = "") =>
     request<AgeingSegmentMatrix>(`/api/ageing/segment-matrix${queryString}`),
   searchDevices: (q: string) =>

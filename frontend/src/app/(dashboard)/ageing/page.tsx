@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BACKEND_ORIGIN, api, AgeingMatrix } from "@/lib/api";
+import { BACKEND_ORIGIN, api, AgeingMatrix, HolderDeviceMatrix } from "@/lib/api";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { ExportButton } from "@/components/ExportButton";
 import { SkeletonCard, SkeletonTable } from "@/components/KpiCard";
 import { useGlobalFilters } from "@/components/GlobalFilters";
+import { n, pct, DeviceCostBanner, useDeviceCost, fmtCr } from "@/components/Highlights";
 
 const STATUS_LABELS: Record<string, string> = {
   FINANCIAL_WO: "Financial Write-off",
@@ -42,15 +43,22 @@ function heatColor(value: number, max: number): string {
 
 export default function AgeingPage() {
   const [data, setData] = useState<AgeingMatrix | null>(null);
+  const [holderDevice, setHolderDevice] = useState<HolderDeviceMatrix | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { queryString } = useGlobalFilters();
+  const [deviceCost, setDeviceCost] = useDeviceCost();
 
   useEffect(() => {
     setData(null);
+    setHolderDevice(null);
     api
       .ageingMatrix(queryString)
       .then(setData)
       .catch((e) => setError(String(e.message ?? e)));
+    api
+      .holderDeviceMatrix(queryString)
+      .then(setHolderDevice)
+      .catch(() => {});
   }, [queryString]);
 
   if (error) return <ErrorBanner message={error} />;
@@ -99,6 +107,8 @@ export default function AgeingPage() {
         <ExportButton href={`${BACKEND_ORIGIN}/api/devices/export/full.csv`} label="Export All Devices" />
       </div>
 
+      <DeviceCostBanner cost={deviceCost} onChange={setDeviceCost} />
+
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6 lg:grid-cols-12">
         {data.bucket_order.map((b) => (
           <div
@@ -113,6 +123,105 @@ export default function AgeingPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {holderDevice && (() => {
+        const dt = Array.from(new Set(holderDevice.detail.map((r) => r.DEVICE_TYPE_NORMALIZED))).sort();
+        const hMatrix: Record<string, Record<string, number>> = {};
+        for (const row of holderDevice.detail) {
+          hMatrix[row.HOLDER_BUCKET] ??= {};
+          hMatrix[row.HOLDER_BUCKET][row.DEVICE_TYPE_NORMALIZED] =
+            (hMatrix[row.HOLDER_BUCKET][row.DEVICE_TYPE_NORMALIZED] ?? 0) + row.DEVICE_COUNT;
+        }
+        const holderTotal = (h: string) => dt.reduce((s, t) => s + (hMatrix[h]?.[t] ?? 0), 0);
+        const netboxTotal = holderDevice.holder_order.reduce((s, h) => s + holderTotal(h), 0);
+
+        return (
+          <div className="glass-card overflow-x-auto rounded-xl p-5">
+            <h2 className="mb-3 text-sm font-semibold text-slate-300">
+              Netbox by Location &times; Device Type
+            </h2>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="p-2 text-left text-xs font-medium uppercase text-slate-500">Location</th>
+                  {dt.map((t) => (
+                    <th key={t} className="p-2 text-right text-xs font-medium uppercase text-slate-500">
+                      {t}
+                    </th>
+                  ))}
+                  <th className="p-2 text-right text-xs font-medium uppercase text-slate-200">Overall</th>
+                  <th className="p-2 text-right text-xs font-medium uppercase text-slate-500">% of Netbox</th>
+                </tr>
+              </thead>
+              <tbody>
+                {holderDevice.holder_order
+                  .filter((h) => holderTotal(h) > 0)
+                  .map((h) => (
+                    <tr key={h} className="border-b border-white/5">
+                      <td className="p-2 text-xs font-medium text-slate-300">
+                        {holderDevice.holder_labels[h] ?? h}
+                      </td>
+                      {dt.map((t) => (
+                        <td key={t} className="p-2 text-right text-xs tabular-nums text-slate-300">
+                          {n(hMatrix[h]?.[t] ?? 0)}
+                        </td>
+                      ))}
+                      <td className="p-2 text-right text-xs font-bold tabular-nums text-white">
+                        {n(holderTotal(h))}
+                      </td>
+                      <td className="p-2 text-right text-xs tabular-nums text-slate-500">
+                        {pct(holderTotal(h), netboxTotal)}
+                      </td>
+                    </tr>
+                  ))}
+                <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+                  <td className="p-2 text-xs uppercase text-slate-300">Total</td>
+                  {dt.map((t) => (
+                    <td key={t} className="p-2 text-right text-xs tabular-nums text-slate-200">
+                      {n(holderDevice.holder_order.reduce((s, h) => s + (hMatrix[h]?.[t] ?? 0), 0))}
+                    </td>
+                  ))}
+                  <td className="p-2 text-right text-xs font-bold tabular-nums text-white">{n(netboxTotal)}</td>
+                  <td className="p-2 text-right text-xs tabular-nums text-slate-300">100.0%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+
+      <div className="glass-card overflow-x-auto rounded-xl p-5">
+        <h2 className="mb-3 text-sm font-semibold text-slate-300">Ageing Bucket Detail</h2>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-white/10">
+              <th className="p-2 text-left text-xs font-medium uppercase text-slate-500">Ageing Bucket</th>
+              <th className="p-2 text-right text-xs font-medium uppercase text-slate-500">Devices</th>
+              <th className="p-2 text-right text-xs font-medium uppercase text-slate-500">Capital (Rs. Cr)</th>
+              <th className="p-2 text-right text-xs font-medium uppercase text-slate-500">% of Stuck</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.bucket_order.map((b) => {
+              const count = data.totals_by_bucket[b] ?? 0;
+              return (
+                <tr key={b} className="border-b border-white/5">
+                  <td className="p-2 text-xs font-medium text-slate-300">{BUCKET_LABELS[b] ?? b}</td>
+                  <td className="p-2 text-right text-xs tabular-nums text-slate-300">{n(count)}</td>
+                  <td className="p-2 text-right text-xs tabular-nums text-slate-300">{fmtCr(count, deviceCost)}</td>
+                  <td className="p-2 text-right text-xs tabular-nums text-slate-500">{pct(count, grandTotal)}</td>
+                </tr>
+              );
+            })}
+            <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+              <td className="p-2 text-xs uppercase text-slate-300">Total</td>
+              <td className="p-2 text-right text-xs tabular-nums text-white">{n(grandTotal)}</td>
+              <td className="p-2 text-right text-xs tabular-nums text-white">{fmtCr(grandTotal, deviceCost)}</td>
+              <td className="p-2 text-right text-xs tabular-nums text-slate-300">100.0%</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       {/* Two separate <table>s (header-only, body-only): a frozen <thead> on

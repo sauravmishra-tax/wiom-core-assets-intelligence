@@ -78,6 +78,42 @@ def export_ageing_matrix_csv(
     return rows_to_csv_response(_ordered_rows(client, device_type, holder_bucket, status), "ageing_matrix.csv")
 
 
+_HOLDER_ORDER = ["customer", "partner", "returned_to_wiom", "wiom_warehouse", "unknown"]
+_HOLDER_LABELS = {
+    "customer": "Active Customer",
+    "partner": "With Partner",
+    "returned_to_wiom": "Returned to Wiom",
+    "wiom_warehouse": "Wiom Warehouse",
+    "unknown": "Unknown",
+}
+
+
+def _holder_device_matrix_sql(status: str | None = None) -> str:
+    fc = _build_filter_clause(None, None, status)
+    where = where_or_and(fc, existing_where=False)
+    return f"""
+WITH {enriched_cte()},
+filtered AS (SELECT * FROM enriched{where})
+SELECT HOLDER_BUCKET, DEVICE_TYPE_NORMALIZED, COUNT(*) AS device_count
+FROM filtered
+GROUP BY 1, 2
+"""
+
+
+@router.get("/holder-device-matrix")
+def get_holder_device_matrix(
+    status: str | None = None,
+    client: WarehouseClient = Depends(get_warehouse_client),
+) -> dict:
+    """Current holder (customer/partner/returned/warehouse) x device type
+    cross-tab - independent of ageing bucket, answers "where does every
+    device physically sit right now, split ONT vs Router."""
+    rows = client.query(_holder_device_matrix_sql(status))
+    order = {h: i for i, h in enumerate(_HOLDER_ORDER)}
+    rows.sort(key=lambda r: order.get(r["HOLDER_BUCKET"], len(order)))
+    return {"holder_order": _HOLDER_ORDER, "holder_labels": _HOLDER_LABELS, "detail": rows}
+
+
 # SEGMENT rule, per business definition:
 #   WIOM   = device's current location is WIOM (wiom_warehouse or returned_to_wiom)
 #            - this wins regardless of partner history, since "current status"
