@@ -67,10 +67,10 @@ export function DeviceCostBanner({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-rose-400/40 bg-rose-500/10 px-4 py-2.5 text-xs text-slate-700 dark:text-slate-300">
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border-2 border-rose-500 bg-rose-50 px-4 py-2.5 text-xs text-rose-950 dark:border-rose-400 dark:bg-[#2a1620] dark:text-rose-100">
       <span className="text-rose-600 dark:text-rose-300">⚠</span>
-      <span>Device cost used in every Rs. figure below &mdash;</span>
-      <span className="inline-flex items-center gap-1 font-semibold text-rose-700 dark:text-rose-300">
+      <span className="font-medium">Device cost used in every Rs. figure below &mdash;</span>
+      <span className="inline-flex items-center gap-1 font-bold">
         Rs.
         <input
           type="number"
@@ -85,7 +85,7 @@ export function DeviceCostBanner({
         />
         /device
       </span>
-      <span className="text-slate-500">(editable placeholder, pending finance sign-off)</span>
+      <span className="text-rose-700 dark:text-rose-300/80">(editable placeholder, pending finance sign-off)</span>
     </div>
   );
 }
