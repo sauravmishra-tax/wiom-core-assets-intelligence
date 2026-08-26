@@ -26,8 +26,7 @@ const NAV_ITEMS = [
   { href: "/customers", label: "Customers", icon: "◉" },
   { href: "/cx-ageing", label: "CX Ageing", icon: "◷" },
   { href: "/search", label: "Device Search", icon: "⌕" },
-  { href: "/methodology", label: "Methodology", icon: "ⓘ" },
-  { href: "/schema-config", label: "Schema Config", icon: "⚙", adminOnly: true },
+  { href: "/schema-config", label: "Schema & Methodology", icon: "⚙" },
   { href: "/users", label: "Users", icon: "◈", adminOnly: true },
   { href: "/audit-log", label: "Audit Log", icon: "▤", adminOnly: true },
 ];
