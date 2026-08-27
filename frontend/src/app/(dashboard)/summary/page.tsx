@@ -229,10 +229,15 @@ export default function SummaryPage() {
         // installed with a customer, not that it's a live customer install)
         // - that's the useful signal: which channel a write-off traces back to.
         const woLostRows = location.detail.filter((r) => r.LIFECYCLE !== "LIVE");
+        const woLostDt = Array.from(new Set(woLostRows.map((r) => r.DEVICE_TYPE_NORMALIZED))).sort();
         const woLostMatrix: Record<string, { WRITTEN_OFF: number; LOST: number }> = {};
+        const woLostTypeMatrix: Record<string, Record<string, number>> = {};
         for (const row of woLostRows) {
           woLostMatrix[row.LOCATION_4WAY] ??= { WRITTEN_OFF: 0, LOST: 0 };
           woLostMatrix[row.LOCATION_4WAY][row.LIFECYCLE as "WRITTEN_OFF" | "LOST"] += row.DEVICE_COUNT;
+          woLostTypeMatrix[row.LOCATION_4WAY] ??= {};
+          woLostTypeMatrix[row.LOCATION_4WAY][row.DEVICE_TYPE_NORMALIZED] =
+            (woLostTypeMatrix[row.LOCATION_4WAY][row.DEVICE_TYPE_NORMALIZED] ?? 0) + row.DEVICE_COUNT;
         }
         const woLostRowTotal = (loc: string) =>
           (woLostMatrix[loc]?.WRITTEN_OFF ?? 0) + (woLostMatrix[loc]?.LOST ?? 0);
@@ -308,6 +313,11 @@ export default function SummaryPage() {
                 <thead>
                   <tr className="border-b border-white/10">
                     <th className="p-2 text-left text-xs font-medium uppercase text-slate-500">Location</th>
+                    {woLostDt.map((t) => (
+                      <th key={t} className="p-2 text-right text-xs font-medium uppercase text-slate-500">
+                        {t}
+                      </th>
+                    ))}
                     <th className="p-2 text-right text-xs font-medium uppercase text-rose-300">Written Off</th>
                     <th className="p-2 text-right text-xs font-medium uppercase text-rose-400">Lost</th>
                     <th className="p-2 text-right text-xs font-medium uppercase text-slate-200">Total</th>
@@ -322,6 +332,11 @@ export default function SummaryPage() {
                         <td className="p-2 text-xs font-medium text-slate-300">
                           {location.location_labels[loc] ?? loc}
                         </td>
+                        {woLostDt.map((t) => (
+                          <td key={t} className="p-2 text-right text-xs tabular-nums text-slate-400">
+                            {n(woLostTypeMatrix[loc]?.[t] ?? 0)}
+                          </td>
+                        ))}
                         <td className="p-2 text-right text-xs tabular-nums text-slate-300">
                           {n(woLostMatrix[loc]?.WRITTEN_OFF ?? 0)}
                         </td>
@@ -338,6 +353,11 @@ export default function SummaryPage() {
                     ))}
                   <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
                     <td className="p-2 text-xs uppercase text-slate-300">Total</td>
+                    {woLostDt.map((t) => (
+                      <td key={t} className="p-2 text-right text-xs tabular-nums text-slate-200">
+                        {n(location.location_order.reduce((s, loc) => s + (woLostTypeMatrix[loc]?.[t] ?? 0), 0))}
+                      </td>
+                    ))}
                     <td className="p-2 text-right text-xs tabular-nums text-slate-200">{n(woGrand)}</td>
                     <td className="p-2 text-right text-xs tabular-nums text-slate-200">{n(lostGrand)}</td>
                     <td className="p-2 text-right text-xs font-bold tabular-nums text-white">
