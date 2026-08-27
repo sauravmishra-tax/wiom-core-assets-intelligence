@@ -17,6 +17,7 @@ import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
+from app.services import prefetch
 from app.services.warehouse_client import get_warehouse_client
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -44,6 +45,11 @@ def refresh_now(reason: str = "manual") -> datetime:
     with _lock:
         _last_synced_at = now
         _last_synced_reason = reason
+    # Repopulate the cache for the pages that get hit first (Summary,
+    # Executive, Recharge Ageing, CX Ageing) in the background, so whoever
+    # opens one of them next isn't the one paying the cold-Snowflake-query
+    # latency. Doesn't block this function's return.
+    prefetch.warm_cache_async(reason)
     return now
 
 
