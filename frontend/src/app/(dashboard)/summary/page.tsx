@@ -418,6 +418,29 @@ export default function SummaryPage() {
                 {n(woGrand)} + {n(lostGrand)} split here matches the &quot;Lost + Written Off&quot; total
                 on the Key Highlights above and the verified equation on the Executive page.
               </p>
+
+              {location.financial_wo_by_lifecycle && (() => {
+                const fw = location.financial_wo_by_lifecycle;
+                const totalFinancialWo = fw.LIVE + fw.LOST + fw.WRITTEN_OFF;
+                return (
+                  <div className="mt-4 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3.5 text-xs leading-relaxed text-amber-200/90">
+                    <strong className="text-amber-300">Finance vs. Ops mismatch, fleet-wide:</strong>{" "}
+                    {n(totalFinancialWo)} devices have a financial write-off date recorded by Finance.
+                    Only <Num>{n(fw.WRITTEN_OFF)}</Num> of those are also operationally marked
+                    WRITTEN_OFF &mdash; the expected, clean overlap. The other{" "}
+                    <Num tone="danger">{n(fw.LIVE)}</Num> are still showing as a{" "}
+                    <strong className="text-slate-200">live</strong>, in-service device (in the table
+                    above, not this one) even though Finance already booked the loss, and{" "}
+                    <Num tone="warning">{n(fw.LOST)}</Num> more are marked LOST (not WRITTEN_OFF) with a
+                    financial write-off already recorded &mdash; not wrong exactly (a lost device
+                    getting financially written off is expected), just worth knowing it doesn&apos;t
+                    show up under the WRITTEN_OFF status. The <Num tone="danger">{n(fw.LIVE)}</Num>{" "}
+                    still-live figure is the one worth a Finance/Ops reconciliation pass &mdash; those
+                    are devices being treated as active inventory that accounting has already written
+                    off.
+                  </div>
+                );
+              })()}
             </div>
           </>
         );

@@ -159,6 +159,10 @@ def _location_device_matrix_sql(status: str | None = None) -> str:
     # is exactly what's useful to know "for information" (e.g. how many
     # write-offs trace back to a customer install vs a partner that never
     # returned the device).
+    # STATUS_MISMATCH tags whether Finance has already recorded a financial
+    # write-off (WRITE_OFF_DATE) for this device, independent of its current
+    # operational LIFECYCLE - lets the endpoint quantify, per bucket, how
+    # many devices Finance and Ops disagree about (see status_mismatch below).
     return f"""
 WITH {enriched_cte()},
 csp_active AS (
@@ -177,10 +181,11 @@ SELECT
     END AS LOCATION_4WAY,
     f.DEVICE_TYPE_NORMALIZED,
     CASE WHEN f.STATUS_NORMALIZED IN ('WRITTEN_OFF', 'LOST') THEN f.STATUS_NORMALIZED ELSE 'LIVE' END AS LIFECYCLE,
+    CASE WHEN f.WRITE_OFF_DATE IS NOT NULL THEN 1 ELSE 0 END AS HAS_FINANCIAL_WO,
     COUNT(*) AS device_count
 FROM filtered f
 LEFT JOIN csp_active ca ON ca.partner_id = f.PARTNER_ACCOUNT_ID
-GROUP BY 1, 2, 3
+GROUP BY 1, 2, 3, 4
 """
 
 
@@ -194,8 +199,37 @@ def get_location_device_matrix(
     (+ Other for the residual) - crossed with device type. `detail` rows
     carry a LIFECYCLE flag (LIVE / WRITTEN_OFF / LOST) so the frontend can
     build a live-fleet table and a separate informational write-off/lost
-    table from one query."""
-    rows = client.query(_location_device_matrix_sql(status))
+    table from one query.
+
+    `financial_wo_by_lifecycle` quantifies Finance/Ops disagreement: how
+    many devices in each LIFECYCLE bucket already have a financial
+    write-off date recorded, regardless of their operational status. A
+    device that's still LIVE (or LOST, not WRITTEN_OFF) but already
+    carries a financial write-off date means Finance booked the loss
+    before Ops updated the device's status to match.
+    """
+    raw = client.query(_location_device_matrix_sql(status))
     order = {loc: i for i, loc in enumerate(_LOCATION_ORDER)}
-    rows.sort(key=lambda r: order.get(r["LOCATION_4WAY"], len(order)))
-    return {"location_order": _LOCATION_ORDER, "location_labels": _LOCATION_LABELS, "detail": rows}
+
+    detail_totals: dict[tuple[str, str, str], int] = {}
+    financial_wo_by_lifecycle: dict[str, int] = {"LIVE": 0, "LOST": 0, "WRITTEN_OFF": 0}
+    for row in raw:
+        key = (row["LOCATION_4WAY"], row["DEVICE_TYPE_NORMALIZED"], row["LIFECYCLE"])
+        detail_totals[key] = detail_totals.get(key, 0) + row["DEVICE_COUNT"]
+        if row["HAS_FINANCIAL_WO"]:
+            financial_wo_by_lifecycle[row["LIFECYCLE"]] = (
+                financial_wo_by_lifecycle.get(row["LIFECYCLE"], 0) + row["DEVICE_COUNT"]
+            )
+
+    detail = [
+        {"LOCATION_4WAY": loc, "DEVICE_TYPE_NORMALIZED": dt, "LIFECYCLE": lc, "DEVICE_COUNT": count}
+        for (loc, dt, lc), count in detail_totals.items()
+    ]
+    detail.sort(key=lambda r: order.get(r["LOCATION_4WAY"], len(order)))
+
+    return {
+        "location_order": _LOCATION_ORDER,
+        "location_labels": _LOCATION_LABELS,
+        "detail": detail,
+        "financial_wo_by_lifecycle": financial_wo_by_lifecycle,
+    }

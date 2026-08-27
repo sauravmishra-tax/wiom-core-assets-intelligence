@@ -132,6 +132,7 @@ export interface LocationDeviceMatrix {
     LIFECYCLE: "LIVE" | "WRITTEN_OFF" | "LOST";
     DEVICE_COUNT: number;
   }>;
+  financial_wo_by_lifecycle: { LIVE: number; LOST: number; WRITTEN_OFF: number };
 }
 
 export interface AgeingSegmentMatrix {
