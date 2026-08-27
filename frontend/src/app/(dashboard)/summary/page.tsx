@@ -302,6 +302,45 @@ export default function SummaryPage() {
                   </tr>
                 </tbody>
               </table>
+
+              <div className="mt-4 rounded-lg border border-white/8 bg-white/[0.02] p-3.5 text-xs leading-relaxed text-slate-400">
+                <strong className="text-slate-300">How the location mapping works:</strong> every device
+                resolves to exactly one of these 4 (or Other) &mdash;
+                <ul className="ml-4 mt-1.5 list-disc space-y-1">
+                  <li>
+                    <strong className="text-slate-300">Customer</strong> ({n(rowTotal("customer"))}) &mdash;
+                    HOLDER_BUCKET = customer (installed/recovery-pending with a customer account).
+                  </li>
+                  <li>
+                    <strong className="text-slate-300">CSP</strong> ({n(rowTotal("csp"))}) &mdash; with a
+                    partner (HOLDER_BUCKET = partner) <em>and</em> that partner has a live, verified row
+                    in the CSP gateway&apos;s account table today.
+                  </li>
+                  <li>
+                    <strong className="text-slate-300">Ex-CSP</strong> ({n(rowTotal("ex_csp"))}) &mdash;
+                    same partner-holder condition, but that partner has churned or was never onboarded to
+                    the gateway &mdash; no live CSP account row.
+                  </li>
+                  <li>
+                    <strong className="text-slate-300">Wiom Warehouse</strong> ({n(rowTotal("wiom_warehouse"))})
+                    &mdash; HOLDER_BUCKET is wiom_warehouse (never dispatched) or returned_to_wiom
+                    (dispatched, since come back), folded into one row here.
+                  </li>
+                  <li>
+                    <strong className="text-slate-300">Other</strong> ({n(rowTotal("other"))}) &mdash; the
+                    genuine residual: a device with no matching row in the source status/location table
+                    <em>and</em> a recorded dispatch (so it can&apos;t be assumed to still be in a Wiom
+                    warehouse either). Should stay near-zero.
+                  </li>
+                </ul>
+                <p className="mt-2">
+                  Written-off and Lost devices are excluded from every row above (that&apos;s the table
+                  below) &mdash; so this table&apos;s {n(grand)} total plus the {n(woLostGrand)}{" "}
+                  Written-off + Lost devices in the table below add up to {n(grand + woLostGrand)}, the
+                  full Total Fleet. Full definitions on the{" "}
+                  <span className="text-slate-300">Schema &amp; Methodology</span> page.
+                </p>
+              </div>
             </div>
 
             <div className="glass-card overflow-x-auto rounded-xl border border-rose-500/15 p-5">
