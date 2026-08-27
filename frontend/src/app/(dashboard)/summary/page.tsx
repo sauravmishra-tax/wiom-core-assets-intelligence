@@ -193,7 +193,7 @@ export default function SummaryPage() {
             </>
           ),
           <>
-            Of <Num>{n(partners.leaderboard.total_partners)}</Num> partners ever attributed devices,{" "}
+            Of <Num>{n(partners.leaderboard.total_partners)}</Num> CSPs ever attributed devices,{" "}
             <Num tone="success">{n(cspCount)}</Num> are live CSPs today and{" "}
             <Num tone="warning">{n(exCspCount)}</Num> are ex-CSP &mdash; churned or never onboarded, but
             still carrying device history.
@@ -486,13 +486,13 @@ export default function SummaryPage() {
         </Section>
 
         <Section eyebrow="CSP Summary" title="Who the field fleet is attributed to">
-          <Num>{n(partners.leaderboard.total_partners)}</Num> partners have devices attributed to them
+          <Num>{n(partners.leaderboard.total_partners)}</Num> CSPs have devices attributed to them
           at some point, together accounting for <Num>{n(partners.kpis.total_devices)}</Num> devices (
-          {pct(partners.kpis.total_devices, kpis.TOTAL_DEVICES)} of the whole fleet). Of these partners,{" "}
+          {pct(partners.kpis.total_devices, kpis.TOTAL_DEVICES)} of the whole fleet). Of these,{" "}
           <Num tone="success">{n(cspCount)}</Num> are live CSPs today and{" "}
           <Num tone="warning">{n(exCspCount)}</Num>{" "}are ex-CSP &mdash; churned or never onboarded to the
           gateway, but still carrying device history. See the CSP Summary tab for the
-          per-partner breakdown.
+          per-CSP breakdown.
         </Section>
       </div>
 

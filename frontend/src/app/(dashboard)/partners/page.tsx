@@ -72,11 +72,11 @@ export default function PartnersPage() {
 
   const { kpis, by_device_type, leaderboard } = data;
   const rows = leaderboard.rows;
-  // total_partners is CSP + Ex-CSP combined (that's why the KpiCard below
-  // says "Total Partners", never "Total CSP" - Ex-CSP would be
-  // mislabeled). These two are the correct, separately-labeled split,
-  // computed from whatever csp_status filter is currently applied above -
-  // so they always match what the leaderboard table beneath is showing.
+  // total_partners is CSP + Ex-CSP combined - "CSP" is this app's umbrella
+  // term for what used to be called "Partner" (Live CSP / Ex-CSP are its
+  // two sub-states). These two are the separately-labeled split, computed
+  // from whatever csp_status filter is currently applied above - so they
+  // always match what the leaderboard table beneath is showing.
   const liveCspCount = rows.filter((r) => r.CSP_STATUS === "CSP").length;
   const exCspCount = rows.filter((r) => r.CSP_STATUS === "EX_CSP").length;
 
@@ -138,8 +138,8 @@ export default function PartnersPage() {
         <div>
           <h1 className="text-2xl font-bold text-white">CSP Summary</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Merged view (was two separate tabs showing the same partner population from two
-            angles) &mdash; {leaderboard.total_partners.toLocaleString("en-IN")} partners with
+            Merged view (was two separate tabs showing the same CSP population from two
+            angles) &mdash; {leaderboard.total_partners.toLocaleString("en-IN")} CSPs with
             devices ever attributed to them, ranked by lost + written-off &mdash; worst first.
           </p>
         </div>
@@ -170,7 +170,7 @@ export default function PartnersPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
-        <KpiCard label="Total Partners" value={leaderboard.total_partners} />
+        <KpiCard label="Total CSP" value={leaderboard.total_partners} />
         <KpiCard label="Live CSP" value={liveCspCount} tone="success" />
         <KpiCard label="Ex-CSP" value={exCspCount} tone="warning" />
         <KpiCard label="Total devices" value={kpis.total_devices} />
@@ -320,7 +320,7 @@ export default function PartnersPage() {
               <Colgroup />
               <tfoot>
                 <tr className="border-b-2 border-white/20 bg-white/5 font-semibold">
-                  <td className="p-2 text-slate-200">Total ({leaderboard.total_partners.toLocaleString("en-IN")} partners)</td>
+                  <td className="p-2 text-slate-200">Total ({leaderboard.total_partners.toLocaleString("en-IN")} CSPs)</td>
                   <td className="p-2"></td>
                   <td className="p-2"></td>
                   <td className="p-2"></td>
