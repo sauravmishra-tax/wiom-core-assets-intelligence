@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   { href: "/ageing-pivot", label: "Ageing Pivot", icon: "▤" },
   { href: "/vintage", label: "Vintage & Write-off", icon: "⌂" },
   { href: "/asset-register", label: "Asset Register", icon: "▧" },
-  { href: "/partners", label: "Partners & CSP", icon: "⚑" },
+  { href: "/partners", label: "CSP Summary", icon: "⚑" },
   { href: "/warehouses", label: "Warehouses", icon: "▦" },
   { href: "/lost-devices", label: "Lost Devices", icon: "⚠" },
   { href: "/recon", label: "Recon (FAR vs SSOT)", icon: "⇄" },

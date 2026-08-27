@@ -129,7 +129,7 @@ export default function PartnersPage() {
     <div className="space-y-6 p-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Partners &amp; CSP Devices</h1>
+          <h1 className="text-2xl font-bold text-white">CSP Summary</h1>
           <p className="mt-1 text-sm text-slate-500">
             Merged view (was two separate tabs showing the same partner population from two
             angles) &mdash; {leaderboard.total_partners.toLocaleString("en-IN")} partners with
@@ -262,7 +262,7 @@ export default function PartnersPage() {
           <colgroup> + table-layout:fixed. */}
       <div className="glass-card overflow-x-auto rounded-xl p-5">
         <div className="mb-3 flex items-center justify-between gap-4">
-          <h2 className="text-sm font-semibold text-slate-300">Partner Leaderboard</h2>
+          <h2 className="text-sm font-semibold text-slate-300">CSP Leaderboard</h2>
           <input
             type="text"
             value={search}

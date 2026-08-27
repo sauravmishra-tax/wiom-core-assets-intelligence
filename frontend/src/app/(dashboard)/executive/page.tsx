@@ -428,7 +428,7 @@ export default function ExecutivePage() {
 
       <div>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
-          6. Partner attribution
+          6. CSP attribution
         </h2>
         {partners ? (
           <EquationGroup

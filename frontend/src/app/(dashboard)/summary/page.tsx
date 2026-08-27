@@ -485,13 +485,13 @@ export default function SummaryPage() {
           into the 180+/365+ risk buckets above.
         </Section>
 
-        <Section eyebrow="Partners & CSP" title="Who the field fleet is attributed to">
+        <Section eyebrow="CSP Summary" title="Who the field fleet is attributed to">
           <Num>{n(partners.leaderboard.total_partners)}</Num> partners have devices attributed to them
           at some point, together accounting for <Num>{n(partners.kpis.total_devices)}</Num> devices (
           {pct(partners.kpis.total_devices, kpis.TOTAL_DEVICES)} of the whole fleet). Of these partners,{" "}
           <Num tone="success">{n(cspCount)}</Num> are live CSPs today and{" "}
           <Num tone="warning">{n(exCspCount)}</Num>{" "}are ex-CSP &mdash; churned or never onboarded to the
-          gateway, but still carrying device history. See the Partners &amp; CSP tab for the
+          gateway, but still carrying device history. See the CSP Summary tab for the
           per-partner breakdown.
         </Section>
       </div>
