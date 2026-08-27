@@ -43,6 +43,13 @@ LEFT JOIN (
     ) t1 ON t1.DEVICE_ID <> im.DEVICE_ID AND t1.mac_id = im.MAC_ID
 ) t2 ON t2.device_id = im.DEVICE_ID
 WHERE t2.device_id IS NULL
+-- Belt-and-braces: the PNM anti-join above handles shadow-record
+-- duplicates, but 7 DEVICE_IDs (13 rows) were found to be exact,
+-- literal duplicate rows in the source table itself (same MAC, same
+-- invoice, same everything) - inflating every count in the app by
+-- however many they add up to. QUALIFY collapses each DEVICE_ID back
+-- to one row, deterministically (arbitrary but stable tie-break).
+QUALIFY ROW_NUMBER() OVER (PARTITION BY im.DEVICE_ID ORDER BY im.MAC_ID) = 1
 """.strip(),
     ),
     "status_location": (
