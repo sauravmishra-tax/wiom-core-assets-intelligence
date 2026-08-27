@@ -72,6 +72,13 @@ export default function PartnersPage() {
 
   const { kpis, by_device_type, leaderboard } = data;
   const rows = leaderboard.rows;
+  // total_partners is CSP + Ex-CSP combined (that's why the KpiCard below
+  // says "Total Partners", never "Total CSP" - Ex-CSP would be
+  // mislabeled). These two are the correct, separately-labeled split,
+  // computed from whatever csp_status filter is currently applied above -
+  // so they always match what the leaderboard table beneath is showing.
+  const liveCspCount = rows.filter((r) => r.CSP_STATUS === "CSP").length;
+  const exCspCount = rows.filter((r) => r.CSP_STATUS === "EX_CSP").length;
 
   const searchLower = search.trim().toLowerCase();
   const filteredRows = searchLower
@@ -163,7 +170,9 @@ export default function PartnersPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
-        <KpiCard label="Partners" value={leaderboard.total_partners} />
+        <KpiCard label="Total Partners" value={leaderboard.total_partners} />
+        <KpiCard label="Live CSP" value={liveCspCount} tone="success" />
+        <KpiCard label="Ex-CSP" value={exCspCount} tone="warning" />
         <KpiCard label="Total devices" value={kpis.total_devices} />
         <KpiCard label="At customer" value={kpis.at_customer} tone="success" />
         <KpiCard label="With partner" value={kpis.with_partner} />
