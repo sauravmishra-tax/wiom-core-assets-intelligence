@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import Response
 
+from app.services import query_store
 from app.services.csv_export import rows_to_csv_response
 from app.services.filter_utils import _build_filter_clause, where_or_and
 from app.services.sql_fragments import deduped_cte, enriched_cte
@@ -128,3 +129,63 @@ def get_data_quality(client: WarehouseClient = Depends(get_warehouse_client)) ->
             "real device (i.e. double-counting it)."
         ),
     }
+
+
+_LOCATION_ORDER = ["customer", "csp", "ex_csp", "wiom_warehouse", "other"]
+_LOCATION_LABELS = {
+    "customer": "Customer",
+    "csp": "CSP",
+    "ex_csp": "Ex-CSP",
+    "wiom_warehouse": "Wiom Warehouse",
+    "other": "Other",
+}
+
+
+def _location_device_matrix_sql(status: str | None = None) -> str:
+    fc = _build_filter_clause(None, None, status)
+    where = where_or_and(fc, existing_where=False)
+    csp_active_sql = query_store.get("csp_active_partners")
+    # Business-defined 4-way location, ex-written-off/lost (mirrors the
+    # Ageing page's "Netbox by Location" table): a device sitting with a
+    # partner is CSP only if that partner has a live, verified CSP_ACCOUNT
+    # row (csp_active_partners) - otherwise it's Ex-CSP (churned/never
+    # onboarded, still carrying device history). WIOM warehouse folds in
+    # both never-dispatched and returned-to-warehouse stock. "Other" should
+    # be near-zero after the holder_bucket_expr fix (fka "Unknown").
+    return f"""
+WITH {enriched_cte()},
+csp_active AS (
+    {csp_active_sql}
+),
+filtered AS (
+    SELECT * FROM enriched{where}
+)
+SELECT
+    CASE
+        WHEN f.HOLDER_BUCKET = 'customer' THEN 'customer'
+        WHEN f.HOLDER_BUCKET IN ('wiom_warehouse', 'returned_to_wiom') THEN 'wiom_warehouse'
+        WHEN f.HOLDER_BUCKET = 'partner' AND ca.partner_id IS NOT NULL THEN 'csp'
+        WHEN f.HOLDER_BUCKET = 'partner' THEN 'ex_csp'
+        ELSE 'other'
+    END AS LOCATION_4WAY,
+    f.DEVICE_TYPE_NORMALIZED,
+    COUNT(*) AS device_count
+FROM filtered f
+LEFT JOIN csp_active ca ON ca.partner_id = f.PARTNER_ACCOUNT_ID
+WHERE f.STATUS_NORMALIZED NOT IN ('WRITTEN_OFF', 'LOST')
+GROUP BY 1, 2
+"""
+
+
+@router.get("/location-device-matrix")
+def get_location_device_matrix(
+    status: str | None = None,
+    client: WarehouseClient = Depends(get_warehouse_client),
+) -> dict:
+    """Where every LIVE device sits right now (ex-written-off/lost), by the
+    4 business-defined locations - Customer / CSP / Ex-CSP / Wiom Warehouse
+    (+ Other for the residual) - crossed with device type."""
+    rows = client.query(_location_device_matrix_sql(status))
+    order = {loc: i for i, loc in enumerate(_LOCATION_ORDER)}
+    rows.sort(key=lambda r: order.get(r["LOCATION_4WAY"], len(order)))
+    return {"location_order": _LOCATION_ORDER, "location_labels": _LOCATION_LABELS, "detail": rows}

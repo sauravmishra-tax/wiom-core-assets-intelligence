@@ -112,6 +112,16 @@ export interface HolderDeviceMatrix {
   }>;
 }
 
+export interface LocationDeviceMatrix {
+  location_order: string[];
+  location_labels: Record<string, string>;
+  detail: Array<{
+    LOCATION_4WAY: string;
+    DEVICE_TYPE_NORMALIZED: string;
+    DEVICE_COUNT: number;
+  }>;
+}
+
 export interface AgeingSegmentMatrix {
   segments: string[];
   statuses: string[];
@@ -386,6 +396,8 @@ async function postJson<T>(path: string, body?: unknown, method: "POST" | "PUT" 
 
 export const api = {
   executiveKpis: (queryString = "") => request<ExecutiveKpis>(`/api/executive/kpis${queryString}`),
+  locationDeviceMatrix: (queryString = "") =>
+    request<LocationDeviceMatrix>(`/api/executive/location-device-matrix${queryString}`),
   inventoryBreakdown: (queryString = "") => request<InventoryBreakdown>(`/api/inventory/breakdown${queryString}`),
   newGrn: (limit = 100, offset = 0) =>
     request<{ rows: Array<Record<string, unknown>> }>(

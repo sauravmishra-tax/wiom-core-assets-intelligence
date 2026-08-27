@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api, AgeingMatrix, ExecutiveKpis, InventoryBreakdown, PartnerSummaryResponse } from "@/lib/api";
+import { api, AgeingMatrix, ExecutiveKpis, InventoryBreakdown, LocationDeviceMatrix, PartnerSummaryResponse } from "@/lib/api";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { useGlobalFilters } from "@/components/GlobalFilters";
 import { n, pct, Num, StatCard, HighlightTag, KeyHighlights, DeviceCostBanner, useDeviceCost, fmtCr } from "@/components/Highlights";
@@ -31,6 +31,7 @@ export default function SummaryPage() {
   const [inventory, setInventory] = useState<InventoryBreakdown | null>(null);
   const [ageing, setAgeing] = useState<AgeingMatrix | null>(null);
   const [partners, setPartners] = useState<PartnerSummaryResponse | null>(null);
+  const [location, setLocation] = useState<LocationDeviceMatrix | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { queryString } = useGlobalFilters();
   const [deviceCost, setDeviceCost] = useDeviceCost();
@@ -40,6 +41,7 @@ export default function SummaryPage() {
     setInventory(null);
     setAgeing(null);
     setPartners(null);
+    setLocation(null);
     Promise.all([
       api.executiveKpis(queryString),
       api.inventoryBreakdown(queryString),
@@ -53,6 +55,7 @@ export default function SummaryPage() {
         setPartners(p);
       })
       .catch((e) => setError(String(e.message ?? e)));
+    api.locationDeviceMatrix(queryString).then(setLocation).catch(() => {});
   }, [queryString]);
 
   if (error) return <ErrorBanner message={error} />;
@@ -206,6 +209,77 @@ export default function SummaryPage() {
           </>,
         ].filter(Boolean)}
       />
+
+      {location && (() => {
+        const dt = Array.from(new Set(location.detail.map((r) => r.DEVICE_TYPE_NORMALIZED))).sort();
+        const matrix: Record<string, Record<string, number>> = {};
+        for (const row of location.detail) {
+          matrix[row.LOCATION_4WAY] ??= {};
+          matrix[row.LOCATION_4WAY][row.DEVICE_TYPE_NORMALIZED] =
+            (matrix[row.LOCATION_4WAY][row.DEVICE_TYPE_NORMALIZED] ?? 0) + row.DEVICE_COUNT;
+        }
+        const rowTotal = (loc: string) => dt.reduce((s, t) => s + (matrix[loc]?.[t] ?? 0), 0);
+        const grand = location.location_order.reduce((s, loc) => s + rowTotal(loc), 0);
+
+        return (
+          <div className="glass-card overflow-x-auto rounded-xl p-5">
+            <h2 className="mb-1 text-sm font-semibold text-slate-300">
+              Devices by Location &times; Type
+            </h2>
+            <p className="mb-3 text-xs text-slate-500">
+              Live devices only (excludes written-off/lost) &mdash; Customer, CSP (live partner), Ex-CSP
+              (churned/never onboarded), Wiom Warehouse, and Other for anything that resolves to none
+              of those.
+            </p>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="p-2 text-left text-xs font-medium uppercase text-slate-500">Location</th>
+                  {dt.map((t) => (
+                    <th key={t} className="p-2 text-right text-xs font-medium uppercase text-slate-500">
+                      {t}
+                    </th>
+                  ))}
+                  <th className="p-2 text-right text-xs font-medium uppercase text-slate-200">Total</th>
+                  <th className="p-2 text-right text-xs font-medium uppercase text-slate-500">% of Live Fleet</th>
+                </tr>
+              </thead>
+              <tbody>
+                {location.location_order
+                  .filter((loc) => rowTotal(loc) > 0)
+                  .map((loc) => (
+                    <tr key={loc} className="border-b border-white/5">
+                      <td className="p-2 text-xs font-medium text-slate-300">
+                        {location.location_labels[loc] ?? loc}
+                      </td>
+                      {dt.map((t) => (
+                        <td key={t} className="p-2 text-right text-xs tabular-nums text-slate-300">
+                          {n(matrix[loc]?.[t] ?? 0)}
+                        </td>
+                      ))}
+                      <td className="p-2 text-right text-xs font-bold tabular-nums text-white">
+                        {n(rowTotal(loc))}
+                      </td>
+                      <td className="p-2 text-right text-xs tabular-nums text-slate-500">
+                        {pct(rowTotal(loc), grand)}
+                      </td>
+                    </tr>
+                  ))}
+                <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+                  <td className="p-2 text-xs uppercase text-slate-300">Total</td>
+                  {dt.map((t) => (
+                    <td key={t} className="p-2 text-right text-xs tabular-nums text-slate-200">
+                      {n(location.location_order.reduce((s, loc) => s + (matrix[loc]?.[t] ?? 0), 0))}
+                    </td>
+                  ))}
+                  <td className="p-2 text-right text-xs font-bold tabular-nums text-white">{n(grand)}</td>
+                  <td className="p-2 text-right text-xs tabular-nums text-slate-300">100.0%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Section eyebrow="Fleet size" title="Where the whole fleet stands today">
