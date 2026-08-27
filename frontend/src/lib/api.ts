@@ -118,6 +118,7 @@ export interface LocationDeviceMatrix {
   detail: Array<{
     LOCATION_4WAY: string;
     DEVICE_TYPE_NORMALIZED: string;
+    LIFECYCLE: "LIVE" | "WRITTEN_OFF" | "LOST";
     DEVICE_COUNT: number;
   }>;
 }

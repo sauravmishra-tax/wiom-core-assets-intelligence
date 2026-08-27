@@ -211,9 +211,10 @@ export default function SummaryPage() {
       />
 
       {location && (() => {
-        const dt = Array.from(new Set(location.detail.map((r) => r.DEVICE_TYPE_NORMALIZED))).sort();
+        const liveRows = location.detail.filter((r) => r.LIFECYCLE === "LIVE");
+        const dt = Array.from(new Set(liveRows.map((r) => r.DEVICE_TYPE_NORMALIZED))).sort();
         const matrix: Record<string, Record<string, number>> = {};
-        for (const row of location.detail) {
+        for (const row of liveRows) {
           matrix[row.LOCATION_4WAY] ??= {};
           matrix[row.LOCATION_4WAY][row.DEVICE_TYPE_NORMALIZED] =
             (matrix[row.LOCATION_4WAY][row.DEVICE_TYPE_NORMALIZED] ?? 0) + row.DEVICE_COUNT;
@@ -221,63 +222,145 @@ export default function SummaryPage() {
         const rowTotal = (loc: string) => dt.reduce((s, t) => s + (matrix[loc]?.[t] ?? 0), 0);
         const grand = location.location_order.reduce((s, loc) => s + rowTotal(loc), 0);
 
+        // Second table: same 4 locations, but for devices whose CURRENT
+        // status is Written-off or Lost. HOLDER_BUCKET on a written-off/lost
+        // device reflects wherever it was LAST recorded (e.g. "Customer"
+        // here means the device was written off while still marked as
+        // installed with a customer, not that it's a live customer install)
+        // - that's the useful signal: which channel a write-off traces back to.
+        const woLostRows = location.detail.filter((r) => r.LIFECYCLE !== "LIVE");
+        const woLostMatrix: Record<string, { WRITTEN_OFF: number; LOST: number }> = {};
+        for (const row of woLostRows) {
+          woLostMatrix[row.LOCATION_4WAY] ??= { WRITTEN_OFF: 0, LOST: 0 };
+          woLostMatrix[row.LOCATION_4WAY][row.LIFECYCLE as "WRITTEN_OFF" | "LOST"] += row.DEVICE_COUNT;
+        }
+        const woLostRowTotal = (loc: string) =>
+          (woLostMatrix[loc]?.WRITTEN_OFF ?? 0) + (woLostMatrix[loc]?.LOST ?? 0);
+        const woLostGrand = location.location_order.reduce((s, loc) => s + woLostRowTotal(loc), 0);
+        const woGrand = location.location_order.reduce((s, loc) => s + (woLostMatrix[loc]?.WRITTEN_OFF ?? 0), 0);
+        const lostGrand = location.location_order.reduce((s, loc) => s + (woLostMatrix[loc]?.LOST ?? 0), 0);
+
         return (
-          <div className="glass-card overflow-x-auto rounded-xl p-5">
-            <h2 className="mb-1 text-sm font-semibold text-slate-300">
-              Devices by Location &times; Type
-            </h2>
-            <p className="mb-3 text-xs text-slate-500">
-              Live devices only (excludes written-off/lost) &mdash; Customer, CSP (live partner), Ex-CSP
-              (churned/never onboarded), Wiom Warehouse, and Other for anything that resolves to none
-              of those.
-            </p>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10">
-                  <th className="p-2 text-left text-xs font-medium uppercase text-slate-500">Location</th>
-                  {dt.map((t) => (
-                    <th key={t} className="p-2 text-right text-xs font-medium uppercase text-slate-500">
-                      {t}
-                    </th>
-                  ))}
-                  <th className="p-2 text-right text-xs font-medium uppercase text-slate-200">Total</th>
-                  <th className="p-2 text-right text-xs font-medium uppercase text-slate-500">% of Live Fleet</th>
-                </tr>
-              </thead>
-              <tbody>
-                {location.location_order
-                  .filter((loc) => rowTotal(loc) > 0)
-                  .map((loc) => (
-                    <tr key={loc} className="border-b border-white/5">
-                      <td className="p-2 text-xs font-medium text-slate-300">
-                        {location.location_labels[loc] ?? loc}
-                      </td>
-                      {dt.map((t) => (
-                        <td key={t} className="p-2 text-right text-xs tabular-nums text-slate-300">
-                          {n(matrix[loc]?.[t] ?? 0)}
+          <>
+            <div className="glass-card overflow-x-auto rounded-xl p-5">
+              <h2 className="mb-1 text-sm font-semibold text-slate-300">
+                Devices by Location &times; Type
+              </h2>
+              <p className="mb-3 text-xs text-slate-500">
+                Live devices only (excludes written-off/lost &mdash; see the table below for those)
+                &mdash; Customer, CSP (live partner), Ex-CSP (churned/never onboarded), Wiom Warehouse,
+                and Other for anything that resolves to none of those.
+              </p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="p-2 text-left text-xs font-medium uppercase text-slate-500">Location</th>
+                    {dt.map((t) => (
+                      <th key={t} className="p-2 text-right text-xs font-medium uppercase text-slate-500">
+                        {t}
+                      </th>
+                    ))}
+                    <th className="p-2 text-right text-xs font-medium uppercase text-slate-200">Total</th>
+                    <th className="p-2 text-right text-xs font-medium uppercase text-slate-500">% of Live Fleet</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {location.location_order
+                    .filter((loc) => rowTotal(loc) > 0)
+                    .map((loc) => (
+                      <tr key={loc} className="border-b border-white/5">
+                        <td className="p-2 text-xs font-medium text-slate-300">
+                          {location.location_labels[loc] ?? loc}
                         </td>
-                      ))}
-                      <td className="p-2 text-right text-xs font-bold tabular-nums text-white">
-                        {n(rowTotal(loc))}
+                        {dt.map((t) => (
+                          <td key={t} className="p-2 text-right text-xs tabular-nums text-slate-300">
+                            {n(matrix[loc]?.[t] ?? 0)}
+                          </td>
+                        ))}
+                        <td className="p-2 text-right text-xs font-bold tabular-nums text-white">
+                          {n(rowTotal(loc))}
+                        </td>
+                        <td className="p-2 text-right text-xs tabular-nums text-slate-500">
+                          {pct(rowTotal(loc), grand)}
+                        </td>
+                      </tr>
+                    ))}
+                  <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+                    <td className="p-2 text-xs uppercase text-slate-300">Total</td>
+                    {dt.map((t) => (
+                      <td key={t} className="p-2 text-right text-xs tabular-nums text-slate-200">
+                        {n(location.location_order.reduce((s, loc) => s + (matrix[loc]?.[t] ?? 0), 0))}
                       </td>
-                      <td className="p-2 text-right text-xs tabular-nums text-slate-500">
-                        {pct(rowTotal(loc), grand)}
-                      </td>
-                    </tr>
-                  ))}
-                <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
-                  <td className="p-2 text-xs uppercase text-slate-300">Total</td>
-                  {dt.map((t) => (
-                    <td key={t} className="p-2 text-right text-xs tabular-nums text-slate-200">
-                      {n(location.location_order.reduce((s, loc) => s + (matrix[loc]?.[t] ?? 0), 0))}
+                    ))}
+                    <td className="p-2 text-right text-xs font-bold tabular-nums text-white">{n(grand)}</td>
+                    <td className="p-2 text-right text-xs tabular-nums text-slate-300">100.0%</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="glass-card overflow-x-auto rounded-xl border border-rose-500/15 p-5">
+              <h2 className="mb-1 text-sm font-semibold text-slate-300">
+                Lost &amp; Written-off, by Location{" "}
+                <span className="text-xs font-normal text-slate-500">(for information)</span>
+              </h2>
+              <table className="mt-3 w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="p-2 text-left text-xs font-medium uppercase text-slate-500">Location</th>
+                    <th className="p-2 text-right text-xs font-medium uppercase text-rose-300">Written Off</th>
+                    <th className="p-2 text-right text-xs font-medium uppercase text-rose-400">Lost</th>
+                    <th className="p-2 text-right text-xs font-medium uppercase text-slate-200">Total</th>
+                    <th className="p-2 text-right text-xs font-medium uppercase text-slate-500">% of Lost + WO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {location.location_order
+                    .filter((loc) => woLostRowTotal(loc) > 0)
+                    .map((loc) => (
+                      <tr key={loc} className="border-b border-white/5">
+                        <td className="p-2 text-xs font-medium text-slate-300">
+                          {location.location_labels[loc] ?? loc}
+                        </td>
+                        <td className="p-2 text-right text-xs tabular-nums text-slate-300">
+                          {n(woLostMatrix[loc]?.WRITTEN_OFF ?? 0)}
+                        </td>
+                        <td className="p-2 text-right text-xs tabular-nums text-slate-300">
+                          {n(woLostMatrix[loc]?.LOST ?? 0)}
+                        </td>
+                        <td className="p-2 text-right text-xs font-bold tabular-nums text-white">
+                          {n(woLostRowTotal(loc))}
+                        </td>
+                        <td className="p-2 text-right text-xs tabular-nums text-slate-500">
+                          {pct(woLostRowTotal(loc), woLostGrand)}
+                        </td>
+                      </tr>
+                    ))}
+                  <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+                    <td className="p-2 text-xs uppercase text-slate-300">Total</td>
+                    <td className="p-2 text-right text-xs tabular-nums text-slate-200">{n(woGrand)}</td>
+                    <td className="p-2 text-right text-xs tabular-nums text-slate-200">{n(lostGrand)}</td>
+                    <td className="p-2 text-right text-xs font-bold tabular-nums text-white">
+                      {n(woLostGrand)}
                     </td>
-                  ))}
-                  <td className="p-2 text-right text-xs font-bold tabular-nums text-white">{n(grand)}</td>
-                  <td className="p-2 text-right text-xs tabular-nums text-slate-300">100.0%</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                    <td className="p-2 text-right text-xs tabular-nums text-slate-300">100.0%</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p className="mt-3 text-xs leading-relaxed text-slate-500">
+                <strong className="text-slate-400">How to read this:</strong> the &quot;Location&quot;
+                column here is the device&apos;s <em>last known</em> location before it was marked lost
+                or written off &mdash; not where it physically is today. A device shown under
+                &quot;Customer&quot; means it was still recorded as installed with a customer at the
+                point it got written off (most commonly: never physically recovered after churn). A
+                device under &quot;CSP&quot;/&quot;Ex-CSP&quot; means the same, but for a partner-held
+                device. This table is informational only &mdash; it doesn&apos;t add to the Live-fleet
+                table above (that one explicitly excludes these {n(woLostGrand)} devices), and the{" "}
+                {n(woGrand)} + {n(lostGrand)} split here matches the &quot;Lost + Written Off&quot; total
+                on the Key Highlights above and the verified equation on the Executive page.
+              </p>
+            </div>
+          </>
         );
       })()}
 
