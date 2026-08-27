@@ -78,6 +78,40 @@ def export_ageing_matrix_csv(
     return rows_to_csv_response(_ordered_rows(client, device_type, holder_bucket, status), "ageing_matrix.csv")
 
 
+def _financial_writeoff_matrix_sql(
+    device_type: str | None = None,
+    holder_bucket: str | None = None,
+) -> str:
+    fc = _build_filter_clause(device_type, holder_bucket, None)
+    where = where_or_and(fc, existing_where=False)
+    return f"""
+WITH {enriched_cte()},
+filtered AS (SELECT * FROM enriched{where})
+SELECT AGING_BUCKET, WRITE_OFF_YEAR, COUNT(*) AS device_count
+FROM filtered
+WHERE WRITE_OFF_DATE IS NOT NULL
+GROUP BY 1, 2
+"""
+
+
+@router.get("/financial-writeoff-matrix")
+def get_financial_writeoff_matrix(
+    device_type: str | None = None,
+    holder_bucket: str | None = None,
+    client: WarehouseClient = Depends(get_warehouse_client),
+) -> dict:
+    """Financial write-off devices only (WRITE_OFF_DATE IS NOT NULL - the
+    accounting-recognized subset, excludes Non-Financial write-off) crossed
+    with Ageing Bucket (still computed live off LAST_RECHARGE_EXPIRY, even
+    though the device is written off) and Write-off Year. A separate,
+    dedicated cut - NOT folded into the status matrix above, since mixing
+    a write-off-only population into the full status rows double-counts
+    against WRITTEN_OFF there."""
+    rows = client.query(_financial_writeoff_matrix_sql(device_type, holder_bucket))
+    years = sorted({r["WRITE_OFF_YEAR"] for r in rows if r["WRITE_OFF_YEAR"] is not None})
+    return {"bucket_order": AGING_BUCKET_ORDER, "year_order": years, "detail": rows}
+
+
 _HOLDER_ORDER = ["customer", "partner", "returned_to_wiom", "wiom_warehouse", "unknown"]
 # NOT called "Active Customer" - this row mixes active/expired/no-history
 # recharge status together (it's not filtered to recharge-active devices at

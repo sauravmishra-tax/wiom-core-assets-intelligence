@@ -102,6 +102,16 @@ export interface AgeingMatrix {
   }>;
 }
 
+export interface FinancialWriteoffMatrix {
+  bucket_order: string[];
+  year_order: number[];
+  detail: Array<{
+    AGING_BUCKET: string;
+    WRITE_OFF_YEAR: number | null;
+    DEVICE_COUNT: number;
+  }>;
+}
+
 export interface HolderDeviceMatrix {
   holder_order: string[];
   holder_labels: Record<string, string>;
@@ -407,6 +417,8 @@ export const api = {
   ageingMatrix: (queryString = "") => request<AgeingMatrix>(`/api/ageing/matrix${queryString}`),
   holderDeviceMatrix: (queryString = "") =>
     request<HolderDeviceMatrix>(`/api/ageing/holder-device-matrix${queryString}`),
+  financialWriteoffMatrix: (queryString = "") =>
+    request<FinancialWriteoffMatrix>(`/api/ageing/financial-writeoff-matrix${queryString}`),
   ageingSegmentMatrix: (queryString = "") =>
     request<AgeingSegmentMatrix>(`/api/ageing/segment-matrix${queryString}`),
   searchDevices: (q: string) =>

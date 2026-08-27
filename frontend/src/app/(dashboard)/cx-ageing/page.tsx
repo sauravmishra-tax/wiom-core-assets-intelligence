@@ -1,16 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BACKEND_ORIGIN, api, AgeingMatrix } from "@/lib/api";
+import { BACKEND_ORIGIN, api, AgeingMatrix, FinancialWriteoffMatrix } from "@/lib/api";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { ExportButton } from "@/components/ExportButton";
 import { SkeletonCard, SkeletonTable } from "@/components/KpiCard";
 import { useGlobalFilters } from "@/components/GlobalFilters";
+import { n, pct } from "@/components/Highlights";
 
 const STATUS_LABELS: Record<string, string> = {
   FINANCIAL_WO: "Financial Write-off",
   NON_FINANCIAL_WO: "Non-Financial Write-off",
 };
+
+// FINANCIAL_WO / NON_FINANCIAL_WO rows the /matrix endpoint unions in are
+// subsets of WRITTEN_OFF (already counted there) - mixing them into this
+// page's main status x ageing-bucket table double-counted those devices
+// and answered the wrong question. Filtered out here; the dedicated
+// Financial Write-off x Write-off Year table below is the correct cut for
+// "how many devices are financial-write-off AND were with this customer."
+const WO_SPLIT_STATUSES = new Set(["FINANCIAL_WO", "NON_FINANCIAL_WO"]);
 
 const BUCKET_LABELS: Record<string, string> = {
   active: "Active",
@@ -42,11 +51,13 @@ function heatColor(value: number, max: number): string {
 
 export default function CxAgeingPage() {
   const [data, setData] = useState<AgeingMatrix | null>(null);
+  const [finWo, setFinWo] = useState<FinancialWriteoffMatrix | null>(null);
   const [error, setError] = useState<string | null>(null);
   const { queryString } = useGlobalFilters();
 
   useEffect(() => {
     setData(null);
+    setFinWo(null);
     // holder_bucket=customer fixes this view to customer devices only
     const qs = queryString
       ? queryString + "&holder_bucket=customer"
@@ -55,6 +66,7 @@ export default function CxAgeingPage() {
       .ageingMatrix(qs)
       .then(setData)
       .catch((e) => setError(String(e.message ?? e)));
+    api.financialWriteoffMatrix(qs).then(setFinWo).catch(() => {});
   }, [queryString]);
 
   if (error) return <ErrorBanner message={error} />;
@@ -67,8 +79,12 @@ export default function CxAgeingPage() {
     </div>
   );
 
-  const WO_SPLITS = new Set(["FINANCIAL_WO", "NON_FINANCIAL_WO"]);
-  const statuses = Array.from(new Set(data.detail.map((r) => r.STATUS_NORMALIZED))).sort();
+  // Revert: FINANCIAL_WO/NON_FINANCIAL_WO used to be mixed into this status
+  // list - they're subsets of WRITTEN_OFF, not separate statuses, so they
+  // don't belong here. See the dedicated table below instead.
+  const statuses = Array.from(new Set(data.detail.map((r) => r.STATUS_NORMALIZED)))
+    .filter((s) => !WO_SPLIT_STATUSES.has(s))
+    .sort();
   const matrix: Record<string, Record<string, number>> = {};
   for (const row of data.detail) {
     matrix[row.AGING_BUCKET] ??= {};
@@ -86,8 +102,9 @@ export default function CxAgeingPage() {
     rowTotals[status] = data.bucket_order.reduce((s, b) => s + (matrix[b]?.[status] ?? 0), 0);
   }
   for (const b of data.bucket_order) {
-    // exclude WO splits from column totals to avoid double-counting
-    colTotals[b] = statuses.filter((st) => !WO_SPLITS.has(st)).reduce((s, st) => s + (matrix[b]?.[st] ?? 0), 0);
+    // `statuses` already excludes the WO splits (see above), so this is a
+    // plain sum - no double-counting risk left to guard against here.
+    colTotals[b] = statuses.reduce((s, st) => s + (matrix[b]?.[st] ?? 0), 0);
     grandTotal += colTotals[b];
   }
 
@@ -187,6 +204,87 @@ export default function CxAgeingPage() {
           </div>
         </div>
       </div>
+
+      {finWo && (() => {
+        const fMatrix: Record<string, Record<number, number>> = {};
+        for (const row of finWo.detail) {
+          if (row.WRITE_OFF_YEAR == null) continue;
+          fMatrix[row.AGING_BUCKET] ??= {};
+          fMatrix[row.AGING_BUCKET][row.WRITE_OFF_YEAR] =
+            (fMatrix[row.AGING_BUCKET][row.WRITE_OFF_YEAR] ?? 0) + row.DEVICE_COUNT;
+        }
+        const bucketTotal = (b: string) =>
+          finWo.year_order.reduce((s, y) => s + (fMatrix[b]?.[y] ?? 0), 0);
+        const grand = finWo.bucket_order.reduce((s, b) => s + bucketTotal(b), 0);
+        const yearTotal = (y: number) =>
+          finWo.bucket_order.reduce((s, b) => s + (fMatrix[b]?.[y] ?? 0), 0);
+
+        return (
+          <div className="glass-card overflow-x-auto rounded-xl border border-rose-500/15 p-5">
+            <h2 className="mb-1 text-sm font-semibold text-slate-300">
+              Financial Write-off &mdash; Ageing &times; Write-off Year{" "}
+              <span className="text-xs font-normal text-slate-500">(customer-held, separate cut)</span>
+            </h2>
+            <p className="mb-3 text-xs leading-relaxed text-slate-500">
+              Devices that are <strong className="text-slate-300">financial write-off</strong> (
+              <code className="font-mono text-[11px]">WRITE_OFF_DATE IS NOT NULL</code>, the
+              accounting-recognized loss &mdash; excludes non-financial write-off) <em>and</em> were
+              installed with this customer &mdash; crossed with recharge Ageing Bucket (still computed
+              live off last recharge expiry, even though the device is already written off) and the
+              Write-off Year. Not part of the status table above &mdash; a dedicated population, not a
+              row that adds into WRITTEN_OFF there.
+            </p>
+            {finWo.year_order.length === 0 ? (
+              <p className="text-xs text-slate-500">No financial write-off devices in this filter.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="p-2 text-left text-xs font-medium uppercase text-slate-500">Ageing Bucket</th>
+                    {finWo.year_order.map((y) => (
+                      <th key={y} className="p-2 text-right text-xs font-medium uppercase text-slate-500">
+                        {y}
+                      </th>
+                    ))}
+                    <th className="p-2 text-right text-xs font-medium uppercase text-slate-200">Total</th>
+                    <th className="p-2 text-right text-xs font-medium uppercase text-slate-500">% of Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {finWo.bucket_order
+                    .filter((b) => bucketTotal(b) > 0)
+                    .map((b) => (
+                      <tr key={b} className="border-b border-white/5">
+                        <td className="p-2 text-xs font-medium text-slate-300">{BUCKET_LABELS[b] ?? b}</td>
+                        {finWo.year_order.map((y) => (
+                          <td key={y} className="p-2 text-right text-xs tabular-nums text-slate-300">
+                            {n(fMatrix[b]?.[y] ?? 0)}
+                          </td>
+                        ))}
+                        <td className="p-2 text-right text-xs font-bold tabular-nums text-white">
+                          {n(bucketTotal(b))}
+                        </td>
+                        <td className="p-2 text-right text-xs tabular-nums text-slate-500">
+                          {pct(bucketTotal(b), grand)}
+                        </td>
+                      </tr>
+                    ))}
+                  <tr className="border-t-2 border-white/20 bg-white/5 font-bold">
+                    <td className="p-2 text-xs uppercase text-slate-300">Total</td>
+                    {finWo.year_order.map((y) => (
+                      <td key={y} className="p-2 text-right text-xs tabular-nums text-slate-200">
+                        {n(yearTotal(y))}
+                      </td>
+                    ))}
+                    <td className="p-2 text-right text-xs font-bold tabular-nums text-white">{n(grand)}</td>
+                    <td className="p-2 text-right text-xs tabular-nums text-slate-300">100.0%</td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
