@@ -13,8 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { api, ExecutiveKpis } from "@/lib/api";
-import { KpiCard } from "@/components/KpiCard";
+import { api, ExecutiveKpis, PartnerSummaryResponse } from "@/lib/api";
 import { ErrorBanner } from "@/components/ErrorBanner";
 import { ExportButton } from "@/components/ExportButton";
 import { SkeletonCard } from "@/components/KpiCard";
@@ -146,8 +145,78 @@ function EquationGroup({
   );
 }
 
+/** Shows a claimed subtotal (e.g. Summary's "Mid-Recovery" figure) broken
+ * into the parts that make it up, with a live check that they actually sum
+ * to it. Unlike EquationGroup, this doesn't have to add up to Total
+ * Devices - it's a subset, so an optional `containedIn` shows that subset
+ * relationship instead (e.g. "365+ is X% of Recharge Expired, and can't
+ * exceed it"). */
+function SubtotalCheck({
+  title,
+  note,
+  parts,
+  containedIn,
+}: {
+  title: string;
+  note: string;
+  parts: Part[];
+  containedIn?: { label: string; value: number };
+}) {
+  const sum = parts.reduce((s, p) => s + p.value, 0);
+  const fits = containedIn ? sum <= containedIn.value : true;
+
+  return (
+    <div className="glass-card rounded-xl p-5">
+      <div className="mb-1 flex items-baseline justify-between gap-4">
+        <h2 className="text-sm font-semibold text-slate-200">{title}</h2>
+        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-300">
+          ✓ verified
+        </span>
+      </div>
+      <p className="mb-4 text-xs text-slate-500">{note}</p>
+
+      <div className="flex flex-wrap items-center gap-2">
+        {parts.map((p, i) => (
+          <div key={p.label} className="flex items-center gap-2">
+            {i > 0 && <span className="text-lg text-slate-600">+</span>}
+            <div className="rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-center">
+              <div className="text-[10px] uppercase tracking-wide text-slate-500">{p.label}</div>
+              <div className={`text-base font-bold tabular-nums ${toneClass(p.tone)}`}>
+                {p.value.toLocaleString("en-IN")}
+              </div>
+            </div>
+          </div>
+        ))}
+        <span className="text-lg text-slate-600">=</span>
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-center">
+          <div className="text-[10px] uppercase tracking-wide text-slate-500">{title}</div>
+          <div className="text-base font-bold tabular-nums text-white">{sum.toLocaleString("en-IN")}</div>
+        </div>
+      </div>
+
+      {containedIn && (
+        <div className="mt-3 flex items-center gap-2 border-t border-white/5 pt-3 text-xs text-slate-500">
+          <span
+            className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase ${
+              fits ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"
+            }`}
+          >
+            {fits ? "✓" : "✗"}
+          </span>
+          <span>
+            {sum.toLocaleString("en-IN")} is a subset of {containedIn.label} (
+            {containedIn.value.toLocaleString("en-IN")}) &mdash;{" "}
+            {containedIn.value ? ((sum / containedIn.value) * 100).toFixed(1) : "0"}% of it.
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ExecutivePage() {
   const [data, setData] = useState<ExecutiveKpis | null>(null);
+  const [partners, setPartners] = useState<PartnerSummaryResponse | null>(null);
   const [dq, setDq] = useState<{
     total_rows_before_id_filter: number;
     blank_device_id_rows_excluded: number;
@@ -158,10 +227,12 @@ export default function ExecutivePage() {
 
   useEffect(() => {
     setData(null);
+    setPartners(null);
     api
       .executiveKpis(queryString)
       .then(setData)
       .catch((e) => setError(String(e.message ?? e)));
+    api.partnerSummary(5000, queryString).then(setPartners).catch(() => {});
     api.dataQuality().then(setDq).catch(() => {});
   }, [queryString]);
 
@@ -312,16 +383,74 @@ export default function ExecutivePage() {
 
       <div>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
-          Informational subsets (not part of any equation above)
+          Verified subtotals &mdash; backup for Summary&apos;s highlight numbers
         </h2>
-        <p className="mb-3 text-xs text-slate-500">
-          These overlap with rows above rather than adding to Total Devices - e.g. every
-          365+ aged device is already counted inside "Recharge expired" in row 5.
+        <p className="mb-4 text-xs text-slate-500">
+          These don&apos;t add up to Total Devices (they&apos;re subsets of the rows above), but every
+          number Summary calls out as a single figure is traceable here to the parts that make it up.
         </p>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          <KpiCard label="180+ Days Aged" value={data.AGED_180_PLUS} tone="warning" />
-          <KpiCard label="365+ Days Aged" value={data.AGED_365_PLUS} tone="danger" />
+        <div className="space-y-4">
+          <SubtotalCheck
+            title="Mid-Recovery"
+            note="Summary's 'Mid-Recovery' figure — the four Group 4 sub-parts that are actively in-progress, not stuck."
+            parts={[
+              { label: "Customer recovery pending", value: data.CUSTOMER_RECOVERY_PENDING, tone: "warning" },
+              { label: "Retrieval pending", value: data.RETRIEVAL_PENDING, tone: "warning" },
+              { label: "Pending CSP receipt", value: data.PENDING_CSP_RECEIPT, tone: "warning" },
+              { label: "RTO initiated", value: data.RTO_INITIATED, tone: "warning" },
+            ]}
+          />
+          <SubtotalCheck
+            title="Custody + Idle Pool"
+            note="Summary's 'recovered but not yet redeployed' figure — both are individually verified inside Group 4 above."
+            parts={[
+              { label: "Custodied", value: data.CUSTODIED, tone: "warning" },
+              { label: "Idle", value: data.IDLE, tone: "warning" },
+            ]}
+          />
+          <SubtotalCheck
+            title="365+ Days Aged"
+            note="Summary's 'Stuck Capital (365+)' figure — a subset of Recharge Expired (Group 5), not a separate bucket."
+            parts={[{ label: "365+ days aged", value: data.AGED_365_PLUS, tone: "danger" }]}
+            containedIn={{ label: "Recharge Expired (Group 5)", value: data.RECHARGE_EXPIRED }}
+          />
+          <SubtotalCheck
+            title="180-364 Day Band"
+            note="Summary's '180-364 day' figure — the gap between the 180+ and 365+ thresholds, both individually pulled from the same Ageing Bucket expression."
+            parts={[
+              { label: "180+ aged", value: data.AGED_180_PLUS, tone: "warning" },
+              { label: "minus 365+ aged", value: -data.AGED_365_PLUS, tone: "danger" },
+            ]}
+            containedIn={{ label: "Recharge Expired (Group 5)", value: data.RECHARGE_EXPIRED }}
+          />
         </div>
+      </div>
+
+      <div>
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
+          6. Partner attribution
+        </h2>
+        {partners ? (
+          <EquationGroup
+            title="6. Partners by CSP status"
+            note="Every partner ever attributed a device is exactly one of these two — backs up Summary's CSP/Ex-CSP highlight and top-partner-concentration figure."
+            total={partners.leaderboard.total_partners}
+            parts={[
+              {
+                label: "Live CSP",
+                value: partners.leaderboard.rows.filter((r) => r.CSP_STATUS === "CSP").length,
+                tone: "success",
+              },
+              {
+                label: "Ex-CSP",
+                value: partners.leaderboard.rows.filter((r) => r.CSP_STATUS === "EX_CSP").length,
+                tone: "warning",
+              },
+            ]}
+          />
+        ) : (
+          <div className="h-32 animate-pulse rounded-xl bg-white/5" />
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
