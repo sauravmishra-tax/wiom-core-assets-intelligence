@@ -191,14 +191,16 @@ export default function PartnersPage() {
       {(() => {
         const locationSum = kpis.at_customer + kpis.with_partner + kpis.returned_to_wiom + kpis.in_warehouse;
         const rechargeSum = kpis.recharge_active + kpis.recharge_expired + kpis.no_recharge_history;
+        const cspSum = liveCspCount + exCspCount;
         const rows = [
-          { label: "At customer + With partner + Returned to Wiom + In warehouse", sum: locationSum },
-          { label: "Recharge active + Recharge expired + No recharge history", sum: rechargeSum },
+          { label: "At customer + With partner + Returned to Wiom + In warehouse", sum: locationSum, expected: kpis.total_devices },
+          { label: "Recharge active + Recharge expired + No recharge history", sum: rechargeSum, expected: kpis.total_devices },
+          { label: "Live CSP + Ex-CSP", sum: cspSum, expected: leaderboard.total_partners },
         ];
         return (
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {rows.map((r) => {
-              const matches = r.sum === kpis.total_devices;
+              const matches = r.sum === r.expected;
               return (
                 <div
                   key={r.label}
@@ -207,7 +209,7 @@ export default function PartnersPage() {
                   }`}
                 >
                   {matches ? "✓" : "✗"} {r.label} = {r.sum.toLocaleString("en-IN")}
-                  {!matches && ` (expected ${kpis.total_devices.toLocaleString("en-IN")})`}
+                  {!matches && ` (expected ${r.expected.toLocaleString("en-IN")})`}
                 </div>
               );
             })}
