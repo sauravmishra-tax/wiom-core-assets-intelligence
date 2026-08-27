@@ -111,6 +111,14 @@ CASE
     WHEN sl.location = 'wiom' AND FIRST_DISPATCHED_DATE IS NOT NULL THEN 'returned_to_wiom'
     WHEN sl.location = 'customer' THEN 'customer'
     WHEN sl.location = 'partner' THEN 'partner'
+    -- sl.location NULL means this DEVICE_ID has no matching row in T_DEVICE
+    -- at all (not a "wiom" match that fell through - literally missing).
+    -- 31,328 of 31,329 such devices have never been dispatched, which is
+    -- the exact same signal used above to call a device wiom_warehouse -
+    -- so treat it the same way instead of dumping it in 'unknown'. Only a
+    -- device that's missing from T_DEVICE AND has been dispatched stays
+    -- genuinely unknown (we have no idea where it went).
+    WHEN sl.location IS NULL AND FIRST_DISPATCHED_DATE IS NULL THEN 'wiom_warehouse'
     ELSE 'unknown'
 END
 """.strip(),
