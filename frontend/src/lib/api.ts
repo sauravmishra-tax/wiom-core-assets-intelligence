@@ -110,6 +110,7 @@ export interface FinancialWriteoffMatrix {
     WRITE_OFF_YEAR: number | null;
     DEVICE_COUNT: number;
   }>;
+  status_mismatch_count: number;
 }
 
 export interface HolderDeviceMatrix {

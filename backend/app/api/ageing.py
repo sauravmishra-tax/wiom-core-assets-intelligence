@@ -84,13 +84,16 @@ def _financial_writeoff_matrix_sql(
 ) -> str:
     fc = _build_filter_clause(device_type, holder_bucket, None)
     where = where_or_and(fc, existing_where=False)
+    # STATUS_NORMALIZED is pulled through (not grouped into the bucket x year
+    # cells) purely so the endpoint can flag how many of these devices carry
+    # a live operational status - see status_mismatch_count below.
     return f"""
 WITH {enriched_cte()},
 filtered AS (SELECT * FROM enriched{where})
-SELECT AGING_BUCKET, WRITE_OFF_YEAR, COUNT(*) AS device_count
+SELECT AGING_BUCKET, WRITE_OFF_YEAR, STATUS_NORMALIZED, COUNT(*) AS device_count
 FROM filtered
 WHERE WRITE_OFF_DATE IS NOT NULL
-GROUP BY 1, 2
+GROUP BY 1, 2, 3
 """
 
 
@@ -106,10 +109,35 @@ def get_financial_writeoff_matrix(
     though the device is written off) and Write-off Year. A separate,
     dedicated cut - NOT folded into the status matrix above, since mixing
     a write-off-only population into the full status rows double-counts
-    against WRITTEN_OFF there."""
-    rows = client.query(_financial_writeoff_matrix_sql(device_type, holder_bucket))
-    years = sorted({r["WRITE_OFF_YEAR"] for r in rows if r["WRITE_OFF_YEAR"] is not None})
-    return {"bucket_order": AGING_BUCKET_ORDER, "year_order": years, "detail": rows}
+    against WRITTEN_OFF there.
+
+    This population is NOT a subset of the status matrix's WRITTEN_OFF row -
+    Finance recording a write-off and Ops updating STATUS to WRITTEN_OFF are
+    two separate, sometimes out-of-sync events. `status_mismatch_count`
+    quantifies that gap live, so a viewer comparing this table's totals
+    against the status matrix above sees why they don't nest cleanly.
+    """
+    raw = client.query(_financial_writeoff_matrix_sql(device_type, holder_bucket))
+    years = sorted({r["WRITE_OFF_YEAR"] for r in raw if r["WRITE_OFF_YEAR"] is not None})
+
+    bucket_year_totals: dict[tuple[str, int], int] = {}
+    status_mismatch_count = 0
+    for row in raw:
+        key = (row["AGING_BUCKET"], row["WRITE_OFF_YEAR"])
+        bucket_year_totals[key] = bucket_year_totals.get(key, 0) + row["DEVICE_COUNT"]
+        if row["STATUS_NORMALIZED"] != "WRITTEN_OFF":
+            status_mismatch_count += row["DEVICE_COUNT"]
+
+    detail = [
+        {"AGING_BUCKET": b, "WRITE_OFF_YEAR": y, "DEVICE_COUNT": count}
+        for (b, y), count in bucket_year_totals.items()
+    ]
+    return {
+        "bucket_order": AGING_BUCKET_ORDER,
+        "year_order": years,
+        "detail": detail,
+        "status_mismatch_count": status_mismatch_count,
+    }
 
 
 _HOLDER_ORDER = ["customer", "partner", "returned_to_wiom", "wiom_warehouse", "unknown"]

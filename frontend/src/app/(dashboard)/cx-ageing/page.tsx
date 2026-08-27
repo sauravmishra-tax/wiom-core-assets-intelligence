@@ -234,6 +234,19 @@ export default function CxAgeingPage() {
               Write-off Year. Not part of the status table above &mdash; a dedicated population, not a
               row that adds into WRITTEN_OFF there.
             </p>
+            {finWo.status_mismatch_count > 0 && (
+              <div className="mb-3 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3 text-xs leading-relaxed text-amber-200/90">
+                <strong className="text-amber-300">Why these totals won&apos;t match the WRITTEN_OFF
+                row above:</strong>{" "}
+                <span className="font-mono font-bold">{finWo.status_mismatch_count.toLocaleString("en-IN")}</span>{" "}
+                of these financial-write-off devices still carry a <em>live</em> operational status
+                (mostly still shown as DEPLOYED) &mdash; Finance recorded the write-off, but Ops never
+                updated the device&apos;s status to match. That&apos;s why, e.g., the Active bucket here
+                can show <em>more</em> devices than the status table&apos;s WRITTEN_OFF/Active cell: the
+                two tables are measuring different things (finance records vs. operational status), not
+                one being a subset of the other. Worth a Finance/Ops reconciliation pass on this list.
+              </div>
+            )}
             {finWo.year_order.length === 0 ? (
               <p className="text-xs text-slate-500">No financial write-off devices in this filter.</p>
             ) : (
