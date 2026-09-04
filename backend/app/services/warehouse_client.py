@@ -52,8 +52,14 @@ class WarehouseClient:
     def _cache_key(self, sql: str) -> str:
         return hashlib.sha256(sql.encode()).hexdigest()
 
-    def query(self, sql: str, *, use_cache: bool = True) -> list[dict[str, Any]]:
-        """Run a single read-only SQL statement, return rows as dicts."""
+    def query(self, sql: str, *, use_cache: bool = True, timeout: float | None = None) -> list[dict[str, Any]]:
+        """Run a single read-only SQL statement, return rows as dicts.
+
+        `timeout` overrides the client's default request_timeout_seconds for
+        this call only - for queries that are known to run long regardless
+        of caching (e.g. device search: a leading-wildcard ILIKE scan across
+        the full enriched CTE, always live per-request since use_cache=False
+        there, so it can't benefit from warm-up either)."""
         key = self._cache_key(sql)
 
         if use_cache:
@@ -62,7 +68,7 @@ class WarehouseClient:
                 if entry and entry.expires_at > time.monotonic():
                     return entry.rows
 
-        rows = self._execute_raw(sql)
+        rows = self._execute_raw(sql, timeout=timeout)
 
         if use_cache:
             with self._cache_lock:
@@ -72,7 +78,14 @@ class WarehouseClient:
                 )
         return rows
 
-    def _execute_raw(self, sql: str) -> list[dict[str, Any]]:
+    def _execute_raw(self, sql: str, *, timeout: float | None = None) -> list[dict[str, Any]]:
+        # httpx treats an explicit timeout=None as "no timeout at all," not
+        # "use the client's default" - only pass the kwarg when a real
+        # override was requested, so the normal case still gets the
+        # client-level request_timeout_seconds.
+        kwargs: dict[str, Any] = {}
+        if timeout is not None:
+            kwargs["timeout"] = timeout
         resp = self._client.post(
             "/api/dataset",
             headers=self._headers(),
@@ -81,6 +94,7 @@ class WarehouseClient:
                 "native": {"query": sql},
                 "database": self._settings.metabase_database_id,
             },
+            **kwargs,
         )
         if resp.status_code >= 400:
             raise WarehouseQueryError(f"Metabase HTTP {resp.status_code}: {resp.text[:600]}")

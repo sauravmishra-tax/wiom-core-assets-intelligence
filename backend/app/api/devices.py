@@ -52,7 +52,13 @@ def search_devices(
        OR CUSTOMER_ACCOUNT_ID ILIKE '%{needle}%'
     LIMIT {int(limit)}
     """
-    rows = client.query(sql, use_cache=False)
+    # This scans the full enriched CTE (every join) with 5 leading-wildcard
+    # ILIKE conditions, always live (use_cache=False - a search box can't be
+    # cached by query text the way a fixed dashboard query can). That's
+    # inherently slower than a typical dashboard query and occasionally
+    # exceeded the default 60s timeout - bump it here rather than for every
+    # other query on the client.
+    rows = client.query(sql, use_cache=False, timeout=120.0)
     return {"query": q, "results": rows}
 
 
