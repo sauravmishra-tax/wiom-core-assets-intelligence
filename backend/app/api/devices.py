@@ -228,7 +228,10 @@ def get_device_profile(
     WHERE DEVICE_ID = '{safe_id}'
     LIMIT 1
     """
-    rows = client.query(sql, use_cache=False)
+    # Same enriched-CTE cost as Device Search (every join, live per request,
+    # use_cache=False) even though this is an exact-match lookup - same
+    # timeout bump for the same reason.
+    rows = client.query(sql, use_cache=False, timeout=120.0)
     if not rows:
         raise HTTPException(status_code=404, detail=f"Device '{device_id}' not found")
     return rows[0]
